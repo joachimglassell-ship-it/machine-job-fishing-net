@@ -3,3 +3,4 @@ uvicorn[standard]
 openai
 x402
 cdp-sdk
+httpx
