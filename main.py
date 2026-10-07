@@ -195,3 +195,32 @@ Return ONLY valid JSON using exactly this structure:
             status_code=500,
             detail=f"Job failed: {type(exc).__name__}"
         )
+@app.get("/.well-known/agent.json")
+def agent_discovery():
+    return {
+        "name": "Machine Job Fishing Net",
+        "version": "0.2.0",
+        "description": "Experimental machine-callable jobs.",
+        "jobs": [
+            {
+                "name": "find_official_source",
+                "description": "Find the best available primary or official source for an entity, claim, document, or topic.",
+                "method": "POST",
+                "endpoint": "https://machine-job-fishing-net.onrender.com/v1/find-official-source",
+                "input": {
+                    "query": "string"
+                },
+                "output": {
+                    "status": "found | not_found",
+                    "query": "string",
+                    "official_source": "object | null",
+                    "source_date": "string | null",
+                    "relevant_evidence": "string",
+                    "confidence": "number",
+                    "checked_at": "string"
+                }
+            }
+        ],
+        "openapi": "https://machine-job-fishing-net.onrender.com/openapi.json",
+        "documentation": "https://machine-job-fishing-net.onrender.com/docs"
+    }
