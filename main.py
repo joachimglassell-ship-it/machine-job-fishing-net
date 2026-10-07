@@ -1,16 +1,18 @@
 import json
 import os
+import time
+import uuid
 from datetime import datetime, timezone
 from typing import Literal, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from openai import OpenAI
 from pydantic import BaseModel, Field
 
 
 app = FastAPI(
     title="Machine Job Fishing Net",
-    version="0.1.0",
+    version="0.2.0",
     description="Experimental machine-callable jobs."
 )
 
@@ -47,13 +49,14 @@ class SourceResponse(BaseModel):
     relevant_evidence: Optional[str] = None
     confidence: float = Field(ge=0.0, le=1.0)
     checked_at: str
+    request_id: str
 
 
 @app.get("/")
 def root():
     return {
         "service": "Machine Job Fishing Net",
-        "version": "0.1.0",
+        "version": "0.2.0",
         "jobs": ["find_official_source"]
     }
 
@@ -63,8 +66,33 @@ def health():
     return {"status": "ok"}
 
 
+def write_call_log(
+    request_id: str,
+    request: Request,
+    success: bool,
+    result_status: str,
+    latency_ms: int
+):
+    log_event = {
+        "event": "machine_job_call",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "job": "find_official_source",
+        "request_id": request_id,
+        "success": success,
+        "result_status": result_status,
+        "latency_ms": latency_ms,
+        "client": request.client.host if request.client else None,
+        "user_agent": request.headers.get("user-agent")
+    }
+
+    print(json.dumps(log_event), flush=True)
+
+
 @app.post("/v1/find-official-source", response_model=SourceResponse)
-def find_official_source(request: SourceRequest):
+def find_official_source(payload: SourceRequest, request: Request):
+
+    request_id = str(uuid.uuid4())
+    started = time.perf_counter()
 
     instructions = """
 You are performing a provenance job for another machine.
@@ -110,28 +138,59 @@ Return ONLY valid JSON using exactly this structure:
             model="gpt-5-mini",
             tools=[{"type": "web_search"}],
             instructions=instructions,
-            input=request.query
+            input=payload.query
         )
 
         result = json.loads(response.output_text)
 
+        latency_ms = round((time.perf_counter() - started) * 1000)
+
+        write_call_log(
+            request_id=request_id,
+            request=request,
+            success=True,
+            result_status=result["status"],
+            latency_ms=latency_ms
+        )
+
         return SourceResponse(
             status=result["status"],
-            query=request.query,
+            query=payload.query,
             official_source=result.get("official_source"),
             source_date=result.get("source_date"),
             relevant_evidence=result.get("relevant_evidence"),
             confidence=result.get("confidence", 0.0),
-            checked_at=datetime.now(timezone.utc).isoformat()
+            checked_at=datetime.now(timezone.utc).isoformat(),
+            request_id=request_id
         )
 
     except json.JSONDecodeError:
+        latency_ms = round((time.perf_counter() - started) * 1000)
+
+        write_call_log(
+            request_id=request_id,
+            request=request,
+            success=False,
+            result_status="invalid_output",
+            latency_ms=latency_ms
+        )
+
         raise HTTPException(
             status_code=502,
             detail="Search completed but returned invalid structured output."
         )
 
     except Exception as exc:
+        latency_ms = round((time.perf_counter() - started) * 1000)
+
+        write_call_log(
+            request_id=request_id,
+            request=request,
+            success=False,
+            result_status=type(exc).__name__,
+            latency_ms=latency_ms
+        )
+
         raise HTTPException(
             status_code=500,
             detail=f"Job failed: {type(exc).__name__}"
