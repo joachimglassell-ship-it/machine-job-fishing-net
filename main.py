@@ -8,6 +8,7 @@ from typing import Literal, Optional
 from fastapi import FastAPI, HTTPException, Request
 from openai import OpenAI
 from pydantic import BaseModel, Field
+from cdp import CdpClient
 
 
 app = FastAPI(
@@ -195,6 +196,8 @@ Return ONLY valid JSON using exactly this structure:
             status_code=500,
             detail=f"Job failed: {type(exc).__name__}"
         )
+
+
 @app.get("/.well-known/agent.json")
 def agent_discovery():
     return {
@@ -224,3 +227,16 @@ def agent_discovery():
         "openapi": "https://machine-job-fishing-net.onrender.com/openapi.json",
         "documentation": "https://machine-job-fishing-net.onrender.com/docs"
     }
+
+
+@app.get("/internal/wallet-test")
+async def wallet_test():
+    async with CdpClient() as cdp:
+        account = await cdp.evm.get_or_create_account(
+            name="machine-job-receiver"
+        )
+
+        return {
+            "status": "ok",
+            "address": account.address
+        }
