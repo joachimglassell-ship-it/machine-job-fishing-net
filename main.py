@@ -10,21 +10,71 @@ from openai import OpenAI
 from pydantic import BaseModel, Field
 from cdp import CdpClient
 
+from x402.http import FacilitatorConfig, HTTPFacilitatorClient, PaymentOption
+from x402.http.middleware.fastapi import PaymentMiddlewareASGI
+from x402.http.types import RouteConfig
+from x402.mechanisms.evm.exact import ExactEvmServerScheme
+from x402.server import x402ResourceServer
+
+
+PAY_TO_ADDRESS = "0x3b0946177F281eF9C7CcEE152ec1A7F41Cc5A468"
+NETWORK = "eip155:84532"
+PRICE = "$0.01"
+FACILITATOR_URL = "https://x402.org/facilitator"
+
 
 app = FastAPI(
     title="Machine Job Fishing Net",
-    version="0.2.0",
+    version="0.3.0",
     description="Experimental machine-callable jobs."
 )
 
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 
+# x402 payment infrastructure
+facilitator = HTTPFacilitatorClient(
+    FacilitatorConfig(url=FACILITATOR_URL)
+)
+
+payment_server = x402ResourceServer(facilitator)
+payment_server.register(
+    NETWORK,
+    ExactEvmServerScheme()
+)
+
+payment_routes = {
+    "POST /v1/find-official-source": RouteConfig(
+        accepts=[
+            PaymentOption(
+                scheme="exact",
+                price=PRICE,
+                network=NETWORK,
+                pay_to=PAY_TO_ADDRESS,
+            )
+        ],
+        description=(
+            "Find the best available primary or official source for an "
+            "entity, claim, document, or topic."
+        ),
+    )
+}
+
+app.add_middleware(
+    PaymentMiddlewareASGI,
+    routes=payment_routes,
+    server=payment_server
+)
+
+
 class SourceRequest(BaseModel):
     query: str = Field(
         min_length=3,
         max_length=1000,
-        description="Entity, claim, document or topic for which an official source is requested."
+        description=(
+            "Entity, claim, document or topic for which an official "
+            "source is requested."
+        )
     )
 
 
@@ -57,8 +107,13 @@ class SourceResponse(BaseModel):
 def root():
     return {
         "service": "Machine Job Fishing Net",
-        "version": "0.2.0",
-        "jobs": ["find_official_source"]
+        "version": "0.3.0",
+        "jobs": ["find_official_source"],
+        "payment": {
+            "protocol": "x402",
+            "price": PRICE,
+            "network": NETWORK
+        }
     }
 
 
@@ -202,14 +257,27 @@ Return ONLY valid JSON using exactly this structure:
 def agent_discovery():
     return {
         "name": "Machine Job Fishing Net",
-        "version": "0.2.0",
+        "version": "0.3.0",
         "description": "Experimental machine-callable jobs.",
         "jobs": [
             {
                 "name": "find_official_source",
-                "description": "Find the best available primary or official source for an entity, claim, document, or topic.",
+                "description": (
+                    "Find the best available primary or official source "
+                    "for an entity, claim, document, or topic."
+                ),
                 "method": "POST",
-                "endpoint": "https://machine-job-fishing-net.onrender.com/v1/find-official-source",
+                "endpoint": (
+                    "https://machine-job-fishing-net.onrender.com/"
+                    "v1/find-official-source"
+                ),
+                "payment": {
+                    "protocol": "x402",
+                    "scheme": "exact",
+                    "price": PRICE,
+                    "network": NETWORK,
+                    "environment": "testnet"
+                },
                 "input": {
                     "query": "string"
                 },
@@ -220,12 +288,17 @@ def agent_discovery():
                     "source_date": "string | null",
                     "relevant_evidence": "string",
                     "confidence": "number",
-                    "checked_at": "string"
+                    "checked_at": "string",
+                    "request_id": "string"
                 }
             }
         ],
-        "openapi": "https://machine-job-fishing-net.onrender.com/openapi.json",
-        "documentation": "https://machine-job-fishing-net.onrender.com/docs"
+        "openapi": (
+            "https://machine-job-fishing-net.onrender.com/openapi.json"
+        ),
+        "documentation": (
+            "https://machine-job-fishing-net.onrender.com/docs"
+        )
     }
 
 
