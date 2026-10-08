@@ -2,6 +2,7 @@ import json
 import os
 import time
 import uuid
+import urllib.request
 from datetime import datetime, timezone
 from typing import Literal, Optional
 
@@ -26,7 +27,7 @@ PRICE = "$0.01"
 
 app = FastAPI(
     title="Machine Job Fishing Net",
-    version="0.5.0",
+    version="0.6.0",
     description="Experimental machine-callable jobs."
 )
 
@@ -225,8 +226,8 @@ class SourceResponse(BaseModel):
 def root():
     return {
         "service": "Machine Job Fishing Net",
-        "version": "0.5.0",
-        "jobs": ["find_official_source"],
+        "version": "0.6.0",
+        "jobs": ["find_official_source", "tsre_daily_investment_desk"],
         "payment": {
             "protocol": "x402",
             "price": PRICE,
@@ -238,6 +239,58 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/v1/tsre/daily")
+def tsre_daily(request: Request):
+    request_id = str(uuid.uuid4())
+    started = time.perf_counter()
+    source_url = (
+        "https://raw.githubusercontent.com/"
+        "joachimglassell-ship-it/tsre-live-scanners/main/"
+        "daily_investment_desk.json"
+    )
+
+    try:
+        with urllib.request.urlopen(source_url, timeout=15) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+
+        latency_ms = round((time.perf_counter() - started) * 1000)
+        log_event = {
+            "event": "tsre_daily_call",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "job": "tsre_daily_investment_desk",
+            "request_id": request_id,
+            "success": True,
+            "observation_date": payload.get("date"),
+            "schema_version": payload.get("schema_version"),
+            "latency_ms": latency_ms,
+            "client": request.client.host if request.client else None,
+            "user_agent": request.headers.get("user-agent"),
+        }
+        print(json.dumps(log_event), flush=True)
+        return payload
+
+    except Exception as exc:
+        latency_ms = round((time.perf_counter() - started) * 1000)
+        log_event = {
+            "event": "tsre_daily_call",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "job": "tsre_daily_investment_desk",
+            "request_id": request_id,
+            "success": False,
+            "result_status": type(exc).__name__,
+            "latency_ms": latency_ms,
+            "client": request.client.host if request.client else None,
+            "user_agent": request.headers.get("user-agent"),
+        }
+        print(json.dumps(log_event), flush=True)
+        raise HTTPException(
+            status_code=502,
+            detail="Current TSRE Daily Investment Desk is unavailable."
+        )
+
+
 
 
 def write_call_log(
@@ -375,9 +428,31 @@ Return ONLY valid JSON using exactly this structure:
 def agent_discovery():
     return {
         "name": "Machine Job Fishing Net",
-        "version": "0.5.0",
+        "version": "0.6.0",
         "description": "Experimental machine-callable jobs.",
         "jobs": [
+            {
+                "name": "tsre_daily_investment_desk",
+                "description": (
+                    "Free daily machine-readable research intelligence for "
+                    "Swedish equities, including market regime, breadth, "
+                    "sector rotation, RS20 candidates and Tactical Radar. "
+                    "Research decision support; not an autonomous buy/sell signal."
+                ),
+                "method": "GET",
+                "endpoint": (
+                    "https://machine-job-fishing-net.onrender.com/"
+                    "v1/tsre/daily"
+                ),
+                "payment": None,
+                "input": None,
+                "output": {
+                    "schema_version": "daily_investment_desk_v1.1",
+                    "producer": "TSRE Daily Investment Desk",
+                    "format": "application/json",
+                    "research_use": True
+                }
+            },
             {
                 "name": "find_official_source",
                 "description": (
