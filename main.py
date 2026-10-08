@@ -2,7 +2,6 @@ import json
 import os
 import time
 import uuid
-import urllib.request
 from datetime import datetime, timezone
 from typing import Literal, Optional
 
@@ -245,15 +244,15 @@ def health():
 def tsre_daily(request: Request):
     request_id = str(uuid.uuid4())
     started = time.perf_counter()
-    source_url = (
-        "https://raw.githubusercontent.com/"
-        "joachimglassell-ship-it/machine-job-fishing-net/main/"
-        "feeds/tsre_daily.json"
+    feed_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "feeds",
+        "tsre_daily.json",
     )
 
     try:
-        with urllib.request.urlopen(source_url, timeout=15) as response:
-            payload = json.loads(response.read().decode("utf-8"))
+        with open(feed_path, "r", encoding="utf-8") as feed_file:
+            payload = json.load(feed_file)
 
         latency_ms = round((time.perf_counter() - started) * 1000)
         log_event = {
