@@ -1,6 +1,6 @@
 fastapi
 uvicorn[standard]
 openai
-x402
+x402[extensions]
 cdp-sdk
 httpx
