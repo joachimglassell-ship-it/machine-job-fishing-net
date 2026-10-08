@@ -247,8 +247,8 @@ def tsre_daily(request: Request):
     started = time.perf_counter()
     source_url = (
         "https://raw.githubusercontent.com/"
-        "joachimglassell-ship-it/tsre-live-scanners/main/"
-        "daily_investment_desk.json"
+        "joachimglassell-ship-it/machine-job-fishing-net/main/"
+        "feeds/tsre_daily.json"
     )
 
     try:
