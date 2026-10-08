@@ -1,34 +1,35 @@
 {
   "schema_version": "daily_investment_desk_v1.1",
   "producer": "TSRE Daily Investment Desk v1.1",
-  "date": "2026-10-07",
-  "timestamp": "2026-10-07T23:28:31.109870+02:00",
+  "date": "2026-10-08",
+  "timestamp": "2026-10-08T23:28:10.193988+02:00",
   "status": "OK",
-  "rs20_signal_date": "2026-10-06",
+  "rs20_signal_date": "2026-10-07",
   "market": {
     "structural_regime": "SELECTIVE RISK-ON",
     "structural_score": 5,
-    "tactical_regime": "SUPPORTIVE",
-    "tactical_score": 4,
-    "tactical_long_risk": "NORMAL",
+    "tactical_regime": "NEUTRAL",
+    "tactical_score": 0,
+    "tactical_long_risk": "SELECTIVE",
     "breadth": "MIXED",
     "market_rebound_context": "NO",
-    "desk_gate": "NORMAL"
+    "desk_gate": "SELECTIVE"
   },
   "sectors": {
     "priority_sectors": [
       "Information Technology",
-      "Industrials"
+      "Financials"
     ],
-    "selective_sectors": [],
+    "selective_sectors": [
+      "Industrials",
+      "Consumer Discretionary"
+    ],
     "rotation_watch_sectors": [
       "Consumer Staples",
       "Health Care",
       "Communication Services"
     ],
     "watch_sectors": [
-      "Financials",
-      "Consumer Discretionary",
       "Materials"
     ],
     "deprioritized_sectors": [
@@ -37,135 +38,276 @@
     "rotation_signals": [
       {
         "sector": "Financials",
-        "previous_state": "LEADING",
-        "rotation_state": "WEAKENING",
-        "transition": "EARLY_NEGATIVE_ROTATION"
+        "previous_state": "WEAKENING",
+        "rotation_state": "LEADING",
+        "transition": "WEAKENING_TO_LEADING"
       },
       {
-        "sector": "Consumer Staples",
-        "previous_state": "LAGGING",
-        "rotation_state": "IMPROVING",
-        "transition": "EARLY_POSITIVE_ROTATION"
-      },
-      {
-        "sector": "Communication Services",
-        "previous_state": "LAGGING",
-        "rotation_state": "IMPROVING",
-        "transition": "EARLY_POSITIVE_ROTATION"
+        "sector": "Consumer Discretionary",
+        "previous_state": "WEAKENING",
+        "rotation_state": "LEADING",
+        "transition": "WEAKENING_TO_LEADING"
       }
     ]
   },
   "news": {
-    "market_bias": "MILD_RISK_ON",
+    "market_bias": "MILD_RISK_OFF",
     "high_event_count": 3,
     "high_headlines": [
-      "Marknaden prisar fortsatt lägre sannolikhet för en Fed-höjning",
-      "Fransk skuldoro pressar euron och europeiska räntemarknader",
-      "Schneider Electric köper PTC för 22,6 miljarder dollar"
+      "Houthiattacker mot Saudiarabien ökar risken för störningar i oljeutbudet",
+      "Fransk budgetoro fortsätter att prägla europeiska obligationsmarknader",
+      "Marknaden inväntar Fed-protokoll efter minskade förväntningar på en oktoberräntehöjning"
     ]
   },
-  "candidate_count": 4,
+  "candidate_count": 10,
   "candidates": [
     {
-      "date": "2026-10-06",
-      "ticker": "SINCH.ST",
-      "company_name": "Sinch AB",
-      "sector": "Communication Services",
+      "date": "2026-10-07",
+      "ticker": "SEB-A.ST",
+      "company_name": "Skandinaviska Enskilda Banken AB",
+      "sector": "Financials",
       "segment": "Large Cap",
-      "liquidity_rank": 34,
-      "liquidity_percentile": 77.7027027027027,
+      "liquidity_rank": 12,
+      "liquidity_percentile": 92.56756756756756,
       "liquidity_bucket": "ELITE",
-      "close": 45.150002,
-      "roc126": 0.76367191,
-      "rs_rank": 97.8417,
-      "ma200": 34.296,
-      "ema20": 46.486063,
-      "ema50": 44.839584,
-      "distance_to_ema20_pct": -2.8741,
+      "close": 226.0,
+      "roc126": 0.26327562,
+      "rs_rank": 81.295,
+      "ma200": 195.719608,
+      "ema20": 230.026392,
+      "ema50": 224.26605,
+      "distance_to_ema20_pct": -1.7504,
       "broad_member": true,
       "core_member": true,
       "elite_member": true,
       "rs20_signal": true,
-      "sector_source": "YAHOO_FALLBACK",
+      "sector_source": "RS20_EXISTING",
       "sector_context": {
-        "rotation_state": "IMPROVING",
-        "rotation_score": -6.5699204315363975,
-        "breadth_confirmation": "DIVERGENT",
-        "assessment": "ROTATION_WATCH",
-        "interpretation": "Positiv rotation, men ännu inte etablerat ledarskap."
+        "rotation_state": "LEADING",
+        "rotation_score": 3.5168281135627524,
+        "breadth_confirmation": "CONFIRMED",
+        "assessment": "POSITIVE",
+        "interpretation": "Etablerat och brett sektorledarskap."
       },
       "market_context": {
         "structural_regime": "SELECTIVE RISK-ON",
         "structural_score": 5,
-        "tactical_regime": "SUPPORTIVE",
-        "tactical_score": 4,
-        "tactical_long_risk": "NORMAL",
+        "tactical_regime": "NEUTRAL",
+        "tactical_score": 0,
+        "tactical_long_risk": "SELECTIVE",
         "breadth": "MIXED",
         "market_rebound_context": "NO",
-        "desk_gate": "NORMAL"
+        "desk_gate": "SELECTIVE"
       },
       "news_context": {
-        "market_bias": "MILD_RISK_ON",
+        "market_bias": "MILD_RISK_OFF",
         "high_event_count": 3,
         "high_headlines": [
-          "Marknaden prisar fortsatt lägre sannolikhet för en Fed-höjning",
-          "Fransk skuldoro pressar euron och europeiska räntemarknader",
-          "Schneider Electric köper PTC för 22,6 miljarder dollar"
+          "Houthiattacker mot Saudiarabien ökar risken för störningar i oljeutbudet",
+          "Fransk budgetoro fortsätter att prägla europeiska obligationsmarknader",
+          "Marknaden inväntar Fed-protokoll efter minskade förväntningar på en oktoberräntehöjning"
         ]
       },
-      "desk_rank": "WATCH"
+      "desk_rank": "A"
     },
     {
-      "date": "2026-10-06",
-      "ticker": "ALLEI.ST",
-      "company_name": "Alleima AB",
-      "sector": "Materials",
+      "date": "2026-10-07",
+      "ticker": "TRUE-B.ST",
+      "company_name": "Truecaller AB",
+      "sector": "Information Technology",
       "segment": "Mid Cap",
-      "liquidity_rank": 79,
-      "liquidity_percentile": 47.2972972972973,
+      "liquidity_rank": 71,
+      "liquidity_percentile": 52.702702702702695,
       "liquidity_bucket": "CORE",
-      "close": 116.099998,
-      "roc126": 0.51450128,
-      "rs_rank": 94.2446,
-      "ma200": 92.115518,
-      "ema20": 116.422604,
-      "ema50": 113.818317,
-      "distance_to_ema20_pct": -0.2771,
+      "close": 21.99,
+      "roc126": 1.08080681,
+      "rs_rank": 99.2806,
+      "ma200": 15.51336,
+      "ema20": 22.406405,
+      "ema50": 21.127436,
+      "distance_to_ema20_pct": -1.8584,
       "broad_member": true,
       "core_member": true,
       "elite_member": false,
       "rs20_signal": true,
       "sector_source": "YAHOO_FALLBACK",
       "sector_context": {
-        "rotation_state": "WEAKENING",
-        "rotation_score": -0.8853392081034495,
+        "rotation_state": "LEADING",
+        "rotation_score": 12.637740359355075,
         "breadth_confirmation": "CONFIRMED",
-        "assessment": "CAUTION",
-        "interpretation": "Sektorn tappar relativt momentum."
+        "assessment": "POSITIVE",
+        "interpretation": "Etablerat och brett sektorledarskap."
       },
       "market_context": {
         "structural_regime": "SELECTIVE RISK-ON",
         "structural_score": 5,
-        "tactical_regime": "SUPPORTIVE",
-        "tactical_score": 4,
-        "tactical_long_risk": "NORMAL",
+        "tactical_regime": "NEUTRAL",
+        "tactical_score": 0,
+        "tactical_long_risk": "SELECTIVE",
         "breadth": "MIXED",
         "market_rebound_context": "NO",
-        "desk_gate": "NORMAL"
+        "desk_gate": "SELECTIVE"
       },
       "news_context": {
-        "market_bias": "MILD_RISK_ON",
+        "market_bias": "MILD_RISK_OFF",
         "high_event_count": 3,
         "high_headlines": [
-          "Marknaden prisar fortsatt lägre sannolikhet för en Fed-höjning",
-          "Fransk skuldoro pressar euron och europeiska räntemarknader",
-          "Schneider Electric köper PTC för 22,6 miljarder dollar"
+          "Houthiattacker mot Saudiarabien ökar risken för störningar i oljeutbudet",
+          "Fransk budgetoro fortsätter att prägla europeiska obligationsmarknader",
+          "Marknaden inväntar Fed-protokoll efter minskade förväntningar på en oktoberräntehöjning"
         ]
       },
-      "desk_rank": "LOWER_PRIORITY"
+      "desk_rank": "B"
     },
     {
-      "date": "2026-10-06",
+      "date": "2026-10-07",
+      "ticker": "TROAX.ST",
+      "company_name": "Troax Group AB",
+      "sector": "Industrials",
+      "segment": "Mid Cap",
+      "liquidity_rank": 137,
+      "liquidity_percentile": 8.108108108108109,
+      "liquidity_bucket": "BROAD_ONLY",
+      "close": 146.600006,
+      "roc126": 0.44878294,
+      "rs_rank": 92.0863,
+      "ma200": 122.847907,
+      "ema20": 151.326383,
+      "ema50": 145.58778,
+      "distance_to_ema20_pct": -3.1233,
+      "broad_member": true,
+      "core_member": false,
+      "elite_member": false,
+      "rs20_signal": true,
+      "sector_source": "YAHOO_FALLBACK",
+      "sector_context": {
+        "rotation_state": "LEADING",
+        "rotation_score": 1.3407416171820123,
+        "breadth_confirmation": "DIVERGENT",
+        "assessment": "SELECTIVE",
+        "interpretation": "Cap-weighted ledarskap men svagare equal-weight-bekräftelse."
+      },
+      "market_context": {
+        "structural_regime": "SELECTIVE RISK-ON",
+        "structural_score": 5,
+        "tactical_regime": "NEUTRAL",
+        "tactical_score": 0,
+        "tactical_long_risk": "SELECTIVE",
+        "breadth": "MIXED",
+        "market_rebound_context": "NO",
+        "desk_gate": "SELECTIVE"
+      },
+      "news_context": {
+        "market_bias": "MILD_RISK_OFF",
+        "high_event_count": 3,
+        "high_headlines": [
+          "Houthiattacker mot Saudiarabien ökar risken för störningar i oljeutbudet",
+          "Fransk budgetoro fortsätter att prägla europeiska obligationsmarknader",
+          "Marknaden inväntar Fed-protokoll efter minskade förväntningar på en oktoberräntehöjning"
+        ]
+      },
+      "desk_rank": "B"
+    },
+    {
+      "date": "2026-10-07",
+      "ticker": "BURE.ST",
+      "company_name": "Bure Equity AB",
+      "sector": "Financials",
+      "segment": "Mid Cap",
+      "liquidity_rank": 95,
+      "liquidity_percentile": 36.48648648648648,
+      "liquidity_bucket": "BROAD_ONLY",
+      "close": 309.200012,
+      "roc126": 0.39455049,
+      "rs_rank": 90.6475,
+      "ma200": 256.414076,
+      "ema20": 311.055344,
+      "ema50": 300.69953,
+      "distance_to_ema20_pct": -0.5965,
+      "broad_member": true,
+      "core_member": false,
+      "elite_member": false,
+      "rs20_signal": true,
+      "sector_source": "YAHOO_FALLBACK",
+      "sector_context": {
+        "rotation_state": "LEADING",
+        "rotation_score": 3.5168281135627524,
+        "breadth_confirmation": "CONFIRMED",
+        "assessment": "POSITIVE",
+        "interpretation": "Etablerat och brett sektorledarskap."
+      },
+      "market_context": {
+        "structural_regime": "SELECTIVE RISK-ON",
+        "structural_score": 5,
+        "tactical_regime": "NEUTRAL",
+        "tactical_score": 0,
+        "tactical_long_risk": "SELECTIVE",
+        "breadth": "MIXED",
+        "market_rebound_context": "NO",
+        "desk_gate": "SELECTIVE"
+      },
+      "news_context": {
+        "market_bias": "MILD_RISK_OFF",
+        "high_event_count": 3,
+        "high_headlines": [
+          "Houthiattacker mot Saudiarabien ökar risken för störningar i oljeutbudet",
+          "Fransk budgetoro fortsätter att prägla europeiska obligationsmarknader",
+          "Marknaden inväntar Fed-protokoll efter minskade förväntningar på en oktoberräntehöjning"
+        ]
+      },
+      "desk_rank": "B"
+    },
+    {
+      "date": "2026-10-07",
+      "ticker": "OEM-B.ST",
+      "company_name": "OEM International AB",
+      "sector": "Industrials",
+      "segment": "Mid Cap",
+      "liquidity_rank": 134,
+      "liquidity_percentile": 10.135135135135137,
+      "liquidity_bucket": "BROAD_ONLY",
+      "close": 176.600006,
+      "roc126": 0.34966751,
+      "rs_rank": 89.2086,
+      "ma200": 152.099439,
+      "ema20": 178.883402,
+      "ema50": 175.39741,
+      "distance_to_ema20_pct": -1.2765,
+      "broad_member": true,
+      "core_member": false,
+      "elite_member": false,
+      "rs20_signal": true,
+      "sector_source": "YAHOO_FALLBACK",
+      "sector_context": {
+        "rotation_state": "LEADING",
+        "rotation_score": 1.3407416171820123,
+        "breadth_confirmation": "DIVERGENT",
+        "assessment": "SELECTIVE",
+        "interpretation": "Cap-weighted ledarskap men svagare equal-weight-bekräftelse."
+      },
+      "market_context": {
+        "structural_regime": "SELECTIVE RISK-ON",
+        "structural_score": 5,
+        "tactical_regime": "NEUTRAL",
+        "tactical_score": 0,
+        "tactical_long_risk": "SELECTIVE",
+        "breadth": "MIXED",
+        "market_rebound_context": "NO",
+        "desk_gate": "SELECTIVE"
+      },
+      "news_context": {
+        "market_bias": "MILD_RISK_OFF",
+        "high_event_count": 3,
+        "high_headlines": [
+          "Houthiattacker mot Saudiarabien ökar risken för störningar i oljeutbudet",
+          "Fransk budgetoro fortsätter att prägla europeiska obligationsmarknader",
+          "Marknaden inväntar Fed-protokoll efter minskade förväntningar på en oktoberräntehöjning"
+        ]
+      },
+      "desk_rank": "B"
+    },
+    {
+      "date": "2026-10-07",
       "ticker": "EVO.ST",
       "company_name": "Evolution AB",
       "sector": "Consumer Discretionary",
@@ -173,348 +315,271 @@
       "liquidity_rank": 8,
       "liquidity_percentile": 95.27027027027027,
       "liquidity_bucket": "ELITE",
-      "close": 815.200012,
-      "roc126": 0.32855288,
-      "rs_rank": 86.3309,
-      "ma200": 673.648999,
-      "ema20": 825.169416,
-      "ema50": 805.573803,
-      "distance_to_ema20_pct": -1.2082,
+      "close": 806.400024,
+      "roc126": 0.33598419,
+      "rs_rank": 87.0504,
+      "ma200": 674.497999,
+      "ema20": 823.381855,
+      "ema50": 805.606204,
+      "distance_to_ema20_pct": -2.0624,
       "broad_member": true,
       "core_member": true,
       "elite_member": true,
       "rs20_signal": true,
       "sector_source": "RS20_EXISTING",
       "sector_context": {
-        "rotation_state": "WEAKENING",
-        "rotation_score": -0.49087666714165357,
+        "rotation_state": "LEADING",
+        "rotation_score": 1.2252555940686571,
         "breadth_confirmation": "DIVERGENT",
-        "assessment": "CAUTION",
-        "interpretation": "Sektorn tappar relativt momentum."
+        "assessment": "SELECTIVE",
+        "interpretation": "Cap-weighted ledarskap men svagare equal-weight-bekräftelse."
       },
       "market_context": {
         "structural_regime": "SELECTIVE RISK-ON",
         "structural_score": 5,
-        "tactical_regime": "SUPPORTIVE",
-        "tactical_score": 4,
-        "tactical_long_risk": "NORMAL",
+        "tactical_regime": "NEUTRAL",
+        "tactical_score": 0,
+        "tactical_long_risk": "SELECTIVE",
         "breadth": "MIXED",
         "market_rebound_context": "NO",
-        "desk_gate": "NORMAL"
+        "desk_gate": "SELECTIVE"
       },
       "news_context": {
-        "market_bias": "MILD_RISK_ON",
+        "market_bias": "MILD_RISK_OFF",
         "high_event_count": 3,
         "high_headlines": [
-          "Marknaden prisar fortsatt lägre sannolikhet för en Fed-höjning",
-          "Fransk skuldoro pressar euron och europeiska räntemarknader",
-          "Schneider Electric köper PTC för 22,6 miljarder dollar"
+          "Houthiattacker mot Saudiarabien ökar risken för störningar i oljeutbudet",
+          "Fransk budgetoro fortsätter att prägla europeiska obligationsmarknader",
+          "Marknaden inväntar Fed-protokoll efter minskade förväntningar på en oktoberräntehöjning"
         ]
       },
-      "desk_rank": "LOWER_PRIORITY"
+      "desk_rank": "B"
     },
     {
-      "date": "2026-10-06",
-      "ticker": "HOFI.ST",
-      "company_name": "Hoist Finance AB",
-      "sector": "Financials",
+      "date": "2026-10-07",
+      "ticker": "BUFAB.ST",
+      "company_name": "Bufab AB",
+      "sector": "Industrials",
       "segment": "Mid Cap",
-      "liquidity_rank": 123,
-      "liquidity_percentile": 17.56756756756757,
+      "liquidity_rank": 110,
+      "liquidity_percentile": 26.351351351351347,
       "liquidity_bucket": "BROAD_ONLY",
-      "close": 196.100006,
-      "roc126": 0.26750303,
-      "rs_rank": 80.5755,
-      "ma200": 163.874976,
-      "ema20": 204.418509,
-      "ema50": 203.204875,
-      "distance_to_ema20_pct": -4.0693,
+      "close": 139.800003,
+      "roc126": 0.28459749,
+      "rs_rank": 82.7338,
+      "ma200": 119.343672,
+      "ema20": 140.920074,
+      "ema50": 137.209702,
+      "distance_to_ema20_pct": -0.7948,
       "broad_member": true,
       "core_member": false,
       "elite_member": false,
       "rs20_signal": true,
       "sector_source": "YAHOO_FALLBACK",
       "sector_context": {
-        "rotation_state": "WEAKENING",
-        "rotation_score": 3.8827825635900313,
+        "rotation_state": "LEADING",
+        "rotation_score": 1.3407416171820123,
         "breadth_confirmation": "DIVERGENT",
+        "assessment": "SELECTIVE",
+        "interpretation": "Cap-weighted ledarskap men svagare equal-weight-bekräftelse."
+      },
+      "market_context": {
+        "structural_regime": "SELECTIVE RISK-ON",
+        "structural_score": 5,
+        "tactical_regime": "NEUTRAL",
+        "tactical_score": 0,
+        "tactical_long_risk": "SELECTIVE",
+        "breadth": "MIXED",
+        "market_rebound_context": "NO",
+        "desk_gate": "SELECTIVE"
+      },
+      "news_context": {
+        "market_bias": "MILD_RISK_OFF",
+        "high_event_count": 3,
+        "high_headlines": [
+          "Houthiattacker mot Saudiarabien ökar risken för störningar i oljeutbudet",
+          "Fransk budgetoro fortsätter att prägla europeiska obligationsmarknader",
+          "Marknaden inväntar Fed-protokoll efter minskade förväntningar på en oktoberräntehöjning"
+        ]
+      },
+      "desk_rank": "B"
+    },
+    {
+      "date": "2026-10-07",
+      "ticker": "SINCH.ST",
+      "company_name": "Sinch AB",
+      "sector": "Communication Services",
+      "segment": "Large Cap",
+      "liquidity_rank": 34,
+      "liquidity_percentile": 77.7027027027027,
+      "liquidity_bucket": "ELITE",
+      "close": 43.25,
+      "roc126": 0.75172131,
+      "rs_rank": 98.5612,
+      "ma200": 34.35985,
+      "ema20": 46.177866,
+      "ema50": 44.777247,
+      "distance_to_ema20_pct": -6.3404,
+      "broad_member": true,
+      "core_member": true,
+      "elite_member": true,
+      "rs20_signal": true,
+      "sector_source": "YAHOO_FALLBACK",
+      "sector_context": {
+        "rotation_state": "IMPROVING",
+        "rotation_score": -4.327737306430366,
+        "breadth_confirmation": "CONFIRMED",
+        "assessment": "ROTATION_WATCH",
+        "interpretation": "Positiv rotation, men ännu inte etablerat ledarskap."
+      },
+      "market_context": {
+        "structural_regime": "SELECTIVE RISK-ON",
+        "structural_score": 5,
+        "tactical_regime": "NEUTRAL",
+        "tactical_score": 0,
+        "tactical_long_risk": "SELECTIVE",
+        "breadth": "MIXED",
+        "market_rebound_context": "NO",
+        "desk_gate": "SELECTIVE"
+      },
+      "news_context": {
+        "market_bias": "MILD_RISK_OFF",
+        "high_event_count": 3,
+        "high_headlines": [
+          "Houthiattacker mot Saudiarabien ökar risken för störningar i oljeutbudet",
+          "Fransk budgetoro fortsätter att prägla europeiska obligationsmarknader",
+          "Marknaden inväntar Fed-protokoll efter minskade förväntningar på en oktoberräntehöjning"
+        ]
+      },
+      "desk_rank": "WATCH"
+    },
+    {
+      "date": "2026-10-07",
+      "ticker": "ALLEI.ST",
+      "company_name": "Alleima AB",
+      "sector": "Materials",
+      "segment": "Mid Cap",
+      "liquidity_rank": 79,
+      "liquidity_percentile": 47.2972972972973,
+      "liquidity_bucket": "CORE",
+      "close": 113.599998,
+      "roc126": 0.48942592,
+      "rs_rank": 94.964,
+      "ma200": 92.276707,
+      "ema20": 116.153785,
+      "ema50": 113.809755,
+      "distance_to_ema20_pct": -2.1986,
+      "broad_member": true,
+      "core_member": true,
+      "elite_member": false,
+      "rs20_signal": true,
+      "sector_source": "YAHOO_FALLBACK",
+      "sector_context": {
+        "rotation_state": "WEAKENING",
+        "rotation_score": -0.49516461262366973,
+        "breadth_confirmation": "CONFIRMED",
         "assessment": "CAUTION",
         "interpretation": "Sektorn tappar relativt momentum."
       },
       "market_context": {
         "structural_regime": "SELECTIVE RISK-ON",
         "structural_score": 5,
-        "tactical_regime": "SUPPORTIVE",
-        "tactical_score": 4,
-        "tactical_long_risk": "NORMAL",
+        "tactical_regime": "NEUTRAL",
+        "tactical_score": 0,
+        "tactical_long_risk": "SELECTIVE",
         "breadth": "MIXED",
         "market_rebound_context": "NO",
-        "desk_gate": "NORMAL"
+        "desk_gate": "SELECTIVE"
       },
       "news_context": {
-        "market_bias": "MILD_RISK_ON",
+        "market_bias": "MILD_RISK_OFF",
         "high_event_count": 3,
         "high_headlines": [
-          "Marknaden prisar fortsatt lägre sannolikhet för en Fed-höjning",
-          "Fransk skuldoro pressar euron och europeiska räntemarknader",
-          "Schneider Electric köper PTC för 22,6 miljarder dollar"
+          "Houthiattacker mot Saudiarabien ökar risken för störningar i oljeutbudet",
+          "Fransk budgetoro fortsätter att prägla europeiska obligationsmarknader",
+          "Marknaden inväntar Fed-protokoll efter minskade förväntningar på en oktoberräntehöjning"
+        ]
+      },
+      "desk_rank": "LOWER_PRIORITY"
+    },
+    {
+      "date": "2026-10-07",
+      "ticker": "SSAB-B.ST",
+      "company_name": "SSAB AB",
+      "sector": "Materials",
+      "segment": "Large Cap",
+      "liquidity_rank": 25,
+      "liquidity_percentile": 83.78378378378379,
+      "liquidity_bucket": "ELITE",
+      "close": 99.879997,
+      "roc126": 0.30687458,
+      "rs_rank": 84.8921,
+      "ma200": 87.201689,
+      "ema20": 103.037511,
+      "ema50": 102.208623,
+      "distance_to_ema20_pct": -3.0644,
+      "broad_member": true,
+      "core_member": true,
+      "elite_member": true,
+      "rs20_signal": true,
+      "sector_source": "YAHOO_FALLBACK",
+      "sector_context": {
+        "rotation_state": "WEAKENING",
+        "rotation_score": -0.49516461262366973,
+        "breadth_confirmation": "CONFIRMED",
+        "assessment": "CAUTION",
+        "interpretation": "Sektorn tappar relativt momentum."
+      },
+      "market_context": {
+        "structural_regime": "SELECTIVE RISK-ON",
+        "structural_score": 5,
+        "tactical_regime": "NEUTRAL",
+        "tactical_score": 0,
+        "tactical_long_risk": "SELECTIVE",
+        "breadth": "MIXED",
+        "market_rebound_context": "NO",
+        "desk_gate": "SELECTIVE"
+      },
+      "news_context": {
+        "market_bias": "MILD_RISK_OFF",
+        "high_event_count": 3,
+        "high_headlines": [
+          "Houthiattacker mot Saudiarabien ökar risken för störningar i oljeutbudet",
+          "Fransk budgetoro fortsätter att prägla europeiska obligationsmarknader",
+          "Marknaden inväntar Fed-protokoll efter minskade förväntningar på en oktoberräntehöjning"
         ]
       },
       "desk_rank": "LOWER_PRIORITY"
     }
   ],
   "priority": {
-    "highest": [],
+    "highest": [
+      "Skandinaviska Enskilda Banken AB"
+    ],
     "secondary": [
+      "Truecaller AB",
+      "Troax Group AB",
+      "Bure Equity AB",
+      "OEM International AB",
+      "Evolution AB",
+      "Bufab AB",
       "Sinch AB"
     ],
     "lower": [
       "Alleima AB",
-      "Evolution AB",
-      "Hoist Finance AB"
+      "SSAB AB"
     ]
   },
-  "desk_commentary": "Den övergripande bilden är tudelad. Den strukturella regimen är SELECTIVE RISK-ON, vilket innebär att den längre marknadsbilden inte i sig utesluter aktierisk. Samtidigt är den taktiska regimen SUPPORTIVE, med long-risk NORMAL och desk gate NORMAL. RS20-signalerna är giltiga kandidatsignaler, men miljön för nya kortsiktiga longpositioner kräver högre selektivitet än normalt. Breadth är MIXED, vilket inte ger stöd för en bred och entydig marknadsmedvind. Sektorbilden är mer konstruktiv i Information Technology, Industrials. Consumer Staples, Health Care, Communication Services visar positiv rotation men ännu inte samma etablerade ledarskap. Financials, Consumer Discretionary, Materials försvagas och bör därför tolkas försiktigare även när enskilda aktier har hög RS-rank. Morning Brief har bias MILD_RISK_ON; nyhetslagret används som riskkontext, inte som signalfilter. Screenern hittar 4 aktier som uppfyller den backtestade RS20-kärnan. Desk-rankingen svarar på en annan fråga: vilka av dessa redan giltiga signaler har bäst eller sämst omgivande kontext i dag? A_WATCH betyder därför inte köp, och C_WATCH betyder inte att RS20-signalen är fel. Rankingen är prioriteringsstöd för fortsatt analys och ska hållas åtskild från den backtestade strategin tills dess prognosvärde har testats empiriskt.",
-  "desk_conclusion": "Den taktiska marknadsmiljön är stödjande för long-idéer, men varje kandidat kräver fortfarande individuell validering. Kontextlagren ändrar inte den backtestade RS20-signalen.",
+  "desk_commentary": "Den övergripande bilden är tudelad. Den strukturella regimen är SELECTIVE RISK-ON, vilket innebär att den längre marknadsbilden inte i sig utesluter aktierisk. Samtidigt är den taktiska regimen NEUTRAL, med long-risk SELECTIVE och desk gate SELECTIVE. RS20-signalerna är giltiga kandidatsignaler, men miljön för nya kortsiktiga longpositioner kräver högre selektivitet än normalt. Breadth är MIXED, vilket inte ger stöd för en bred och entydig marknadsmedvind. Sektorbilden är mer konstruktiv i Information Technology, Financials. Consumer Staples, Health Care, Communication Services visar positiv rotation men ännu inte samma etablerade ledarskap. Materials försvagas och bör därför tolkas försiktigare även när enskilda aktier har hög RS-rank. Morning Brief har bias MILD_RISK_OFF; nyhetslagret används som riskkontext, inte som signalfilter. Screenern hittar 10 aktier som uppfyller den backtestade RS20-kärnan. Desk-rankingen svarar på en annan fråga: vilka av dessa redan giltiga signaler har bäst eller sämst omgivande kontext i dag? A_WATCH betyder därför inte köp, och C_WATCH betyder inte att RS20-signalen är fel. Rankingen är prioriteringsstöd för fortsatt analys och ska hållas åtskild från den backtestade strategin tills dess prognosvärde har testats empiriskt. Dagens högsta prioritet är Skandinaviska Enskilda Banken AB, där RS20-signalen sammanfaller med den starkaste kombinationen av universum-/likviditetsmetadata och sektorkontext bland dagens kandidater.",
+  "desk_conclusion": "Marknadsmiljön är blandad och motiverar selektiv kandidatprövning. Nyhetsbilden förstärker försiktigheten. Högsta desk-prioritet: Skandinaviska Enskilda Banken AB. Kontextlagren ändrar inte den backtestade RS20-signalen.",
   "research_contract": {
     "rs20_signal_unchanged": true,
     "context_changes_signal": false,
     "desk_rank_is_backtested": false,
-    "desk_is_order_generator": false,
-    "tactical_radar_signal_unchanged": true,
-    "case_quality_is_order_generator": false
+    "desk_is_order_generator": false
   },
   "data_quality": {
     "warnings": [],
     "desk_ready": true
-  },
-  "tactical_radar": {
-    "schema_version": "tactical_radar_digest_v1.0",
-    "producer": "TSRE Tactical Radar v1.0",
-    "as_of": "2026-10-07",
-    "run_id": "20261007T212828662189Z_b78f23b117ff48808a0bf0f4618b74b2",
-    "status": "RADAR_COMPLETE",
-    "method_status": "RADAR_REPRODUCTION_PASS_CASE_QUALITY_FROZEN_RULES",
-    "universe_version": "2026-07-14_v1",
-    "price_convention": "Yahoo auto_adjust=True",
-    "counts": {
-      "raw_radar_observations": 892,
-      "grouped_cases": 439,
-      "today_signals": 8,
-      "today_score2": 2,
-      "active_cases": 14,
-      "active_score2_cases": 2
-    },
-    "today_signals": [
-      {
-        "symbol": "BEIJ-B.ST",
-        "signal_date": "2026-10-07",
-        "case_id": "BEIJ-B.ST_2",
-        "Close": "142.89999389648438",
-        "rs_excess_60d": "5.312838124062136",
-        "ema50_slope_10_start": "2.786596082848569",
-        "distance_ma200_atr_start": "2.8559620698965356",
-        "pullback_depth_20d_pct": "3.886698970132278",
-        "atr_pct_start": "2.383581804120259",
-        "Q1": "False",
-        "Q2": "False",
-        "Q3": "False",
-        "case_quality_score": "0",
-        "score2": "False"
-      },
-      {
-        "symbol": "BRAV.ST",
-        "signal_date": "2026-10-07",
-        "case_id": "BRAV.ST_11",
-        "Close": "147.10000610351562",
-        "rs_excess_60d": "5.910161649785882",
-        "ema50_slope_10_start": "3.1371494382051557",
-        "distance_ma200_atr_start": "11.403834434545578",
-        "pullback_depth_20d_pct": "3.7303644204191753",
-        "atr_pct_start": "2.018877101008694",
-        "Q1": "False",
-        "Q2": "False",
-        "Q3": "False",
-        "case_quality_score": "0",
-        "score2": "False"
-      },
-      {
-        "symbol": "HPOL-B.ST",
-        "signal_date": "2026-10-07",
-        "case_id": "HPOL-B.ST_2",
-        "Close": "96.0",
-        "rs_excess_60d": "29.366727224145173",
-        "ema50_slope_10_start": "2.312742150172231",
-        "distance_ma200_atr_start": "10.872348640185134",
-        "pullback_depth_20d_pct": "3.5175879396984926",
-        "atr_pct_start": "1.626138533324041",
-        "Q1": "False",
-        "Q2": "False",
-        "Q3": "False",
-        "case_quality_score": "0",
-        "score2": "False"
-      },
-      {
-        "symbol": "INSTAL.ST",
-        "signal_date": "2026-10-07",
-        "case_id": "INSTAL.ST_7",
-        "Close": "41.58000183105469",
-        "rs_excess_60d": "4.2044885170167134",
-        "ema50_slope_10_start": "3.3503955379302175",
-        "distance_ma200_atr_start": "5.258815492106463",
-        "pullback_depth_20d_pct": "5.927599291087719",
-        "atr_pct_start": "3.0149202872862926",
-        "Q1": "False",
-        "Q2": "True",
-        "Q3": "True",
-        "case_quality_score": "2",
-        "score2": "True"
-      },
-      {
-        "symbol": "NIBE-B.ST",
-        "signal_date": "2026-10-07",
-        "case_id": "NIBE-B.ST_5",
-        "Close": "44.16999816894531",
-        "rs_excess_60d": "28.408068737845294",
-        "ema50_slope_10_start": "3.3153217448260497",
-        "distance_ma200_atr_start": "6.180710544799527",
-        "pullback_depth_20d_pct": "3.266988525206053",
-        "atr_pct_start": "2.3076669861904113",
-        "Q1": "False",
-        "Q2": "True",
-        "Q3": "False",
-        "case_quality_score": "1",
-        "score2": "False"
-      },
-      {
-        "symbol": "OEM-B.ST",
-        "signal_date": "2026-10-07",
-        "case_id": "OEM-B.ST_8",
-        "Close": "176.60000610351562",
-        "rs_excess_60d": "-4.94952713013449",
-        "ema50_slope_10_start": "1.452114423688755",
-        "distance_ma200_atr_start": "5.178406896642882",
-        "pullback_depth_20d_pct": "7.0526283665707235",
-        "atr_pct_start": "2.6791019756978143",
-        "Q1": "False",
-        "Q2": "False",
-        "Q3": "True",
-        "case_quality_score": "1",
-        "score2": "False"
-      },
-      {
-        "symbol": "TRUE-B.ST",
-        "signal_date": "2026-10-07",
-        "case_id": "TRUE-B.ST_3",
-        "Close": "21.989999771118164",
-        "rs_excess_60d": "36.54644540667233",
-        "ema50_slope_10_start": "3.4205816883014606",
-        "distance_ma200_atr_start": "6.251181750031874",
-        "pullback_depth_20d_pct": "8.755189115988243",
-        "atr_pct_start": "4.7115349304785745",
-        "Q1": "False",
-        "Q2": "True",
-        "Q3": "True",
-        "case_quality_score": "2",
-        "score2": "True"
-      },
-      {
-        "symbol": "VIT-B.ST",
-        "signal_date": "2026-10-07",
-        "case_id": "VIT-B.ST_4",
-        "Close": "265.3999938964844",
-        "rs_excess_60d": "16.70112663383034",
-        "ema50_slope_10_start": "1.641504076641076",
-        "distance_ma200_atr_start": "1.7852941692978204",
-        "pullback_depth_20d_pct": "5.349500829710277",
-        "atr_pct_start": "3.1322859471546476",
-        "Q1": "False",
-        "Q2": "False",
-        "Q3": "True",
-        "case_quality_score": "1",
-        "score2": "False"
-      }
-    ],
-    "today_score2": [
-      {
-        "symbol": "INSTAL.ST",
-        "signal_date": "2026-10-07",
-        "case_id": "INSTAL.ST_7",
-        "Close": "41.58000183105469",
-        "rs_excess_60d": "4.2044885170167134",
-        "ema50_slope_10_start": "3.3503955379302175",
-        "distance_ma200_atr_start": "5.258815492106463",
-        "pullback_depth_20d_pct": "5.927599291087719",
-        "atr_pct_start": "3.0149202872862926",
-        "Q1": "False",
-        "Q2": "True",
-        "Q3": "True",
-        "case_quality_score": "2",
-        "score2": "True"
-      },
-      {
-        "symbol": "TRUE-B.ST",
-        "signal_date": "2026-10-07",
-        "case_id": "TRUE-B.ST_3",
-        "Close": "21.989999771118164",
-        "rs_excess_60d": "36.54644540667233",
-        "ema50_slope_10_start": "3.4205816883014606",
-        "distance_ma200_atr_start": "6.251181750031874",
-        "pullback_depth_20d_pct": "8.755189115988243",
-        "atr_pct_start": "4.7115349304785745",
-        "Q1": "False",
-        "Q2": "True",
-        "Q3": "True",
-        "case_quality_score": "2",
-        "score2": "True"
-      }
-    ],
-    "active_score2_cases": [
-      {
-        "symbol": "INSTAL.ST",
-        "case_id": "INSTAL.ST_7",
-        "case_start_date": "2026-10-07",
-        "case_last_signal_date": "2026-10-07",
-        "Q1": "False",
-        "Q2": "True",
-        "Q3": "True",
-        "case_quality_score": "2",
-        "score2": "True"
-      },
-      {
-        "symbol": "TRUE-B.ST",
-        "case_id": "TRUE-B.ST_3",
-        "case_start_date": "2026-10-07",
-        "case_last_signal_date": "2026-10-07",
-        "Q1": "False",
-        "Q2": "True",
-        "Q3": "True",
-        "case_quality_score": "2",
-        "score2": "True"
-      }
-    ],
-    "research_contract": {
-      "radar_rules_frozen": true,
-      "case_quality_frozen_at_case_start": true,
-      "score2_definition": "case_quality_score == 2",
-      "ranking_enabled": false,
-      "trade_construction_enabled": false,
-      "autonomous_order_generator": false
-    },
-    "source_hashes": {
-      "radar_observations": "cf4388d36680eb6de1c68b3d762956aa8d870fab446d61f88ee1f06425f447e2",
-      "cases": "e8c03e20a6a0d512d597248dab38140bb63d7af24337f20887fa0f326d09d7d5",
-      "today_signals": "2491fa138d77566e12329f591824066bc710e480079cd3159414a98f5c198a18",
-      "active_cases": "dbf92cdec3725217d68e45248581f77e7cabe52b0da6175b0114750503496e26",
-      "today_score2": "37031b02044fdd9aa19494ec7fd60482e94b8f77b677c187f5fbfebb04e31efb",
-      "active_score2_cases": "519a57f22503fb852738d2766491587e4b827800be872f7adcff0c92355809ad",
-      "thresholds": "c8a3affdd8943c4144053f102c898e6a57ab2002e94b861ad456e1ad5046d5cf"
-    },
-    "warnings": [
-      "Yahoo historical data are mutable; frozen radar reproduction showed small ADX-linked provider drift.",
-      "Case Quality is frozen at case start; later radar observations do not re-score the case.",
-      "This output is research decision support, not an autonomous buy/sell signal.",
-      "Ranking and C14 trade construction are not yet active in production."
-    ]
   }
 }
