@@ -4,3 +4,4 @@ openai
 x402[extensions]
 cdp-sdk
 httpx
+mcp==2.3.0

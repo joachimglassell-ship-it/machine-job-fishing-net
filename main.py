@@ -2,10 +2,13 @@ import json
 import os
 import time
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from typing import Literal, Optional
+from typing import Any, AsyncIterator, Literal, Optional
 
 from fastapi import FastAPI, HTTPException, Request
+from mcp.server.mcpserver import Context, MCPServer
+from mcp.server.transport_security import TransportSecuritySettings
 from openai import OpenAI
 from pydantic import BaseModel, Field
 from cdp import CdpClient
@@ -23,11 +26,92 @@ PAY_TO_ADDRESS = "0x3b0946177F281eF9C7CcEE152ec1A7F41Cc5A468"
 NETWORK = "eip155:84532"
 PRICE = "$0.01"
 
+FEED_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "feeds",
+    "tsre_daily.json",
+)
+
+
+def load_tsre_daily() -> dict[str, Any]:
+    with open(FEED_PATH, "r", encoding="utf-8") as feed_file:
+        return json.load(feed_file)
+
+
+mcp = MCPServer(
+    name="machine-job-fishing-net",
+    title="TSRE Swedish Equity Intelligence",
+    description=(
+        "Machine-readable daily research intelligence for Swedish equities. "
+        "Research decision support; not autonomous investment advice or order generation."
+    ),
+    instructions=(
+        "Use the single tool to retrieve the latest published TSRE Daily Investment Desk. "
+        "Preserve the included research contract when interpreting the data."
+    ),
+    website_url="https://machine-job-fishing-net.onrender.com",
+    version="0.7.0",
+)
+
+
+@mcp.tool(
+    name="get_sweden_market_intelligence",
+    description=(
+        "Retrieve the latest machine-readable TSRE Daily Investment Desk for "
+        "Swedish equities, including market regime, breadth, sector rotation, "
+        "RS20 candidates and Tactical Radar. Research decision support; not an "
+        "autonomous buy/sell signal."
+    ),
+    structured_output=True,
+)
+def get_sweden_market_intelligence(ctx: Context) -> dict[str, Any]:
+    request_id = ctx.request_id
+    started = time.perf_counter()
+    headers = ctx.headers or {}
+
+    try:
+        payload = load_tsre_daily()
+        log_event = {
+            "event": "mcp_tool_call",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "tool": "get_sweden_market_intelligence",
+            "request_id": request_id,
+            "success": True,
+            "observation_date": payload.get("date"),
+            "schema_version": payload.get("schema_version"),
+            "latency_ms": round((time.perf_counter() - started) * 1000),
+            "user_agent": headers.get("user-agent"),
+            "protocol_version": ctx.protocol_version,
+        }
+        print(json.dumps(log_event), flush=True)
+        return payload
+    except Exception as exc:
+        log_event = {
+            "event": "mcp_tool_call",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "tool": "get_sweden_market_intelligence",
+            "request_id": request_id,
+            "success": False,
+            "result_status": type(exc).__name__,
+            "latency_ms": round((time.perf_counter() - started) * 1000),
+            "user_agent": headers.get("user-agent"),
+            "protocol_version": ctx.protocol_version,
+        }
+        print(json.dumps(log_event), flush=True)
+        raise
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    async with mcp.session_manager.run():
+        yield
+
 
 app = FastAPI(
     title="Machine Job Fishing Net",
-    version="0.6.0",
-    description="Experimental machine-callable jobs."
+    version="0.7.0",
+    description="Experimental machine-callable jobs.",
+    lifespan=lifespan,
 )
 
 
@@ -225,8 +309,13 @@ class SourceResponse(BaseModel):
 def root():
     return {
         "service": "Machine Job Fishing Net",
-        "version": "0.6.0",
+        "version": "0.7.0",
         "jobs": ["find_official_source", "tsre_daily_investment_desk"],
+        "mcp": {
+            "transport": "streamable-http",
+            "endpoint": "https://machine-job-fishing-net.onrender.com/mcp/",
+            "tools": ["get_sweden_market_intelligence"],
+        },
         "payment": {
             "protocol": "x402",
             "price": PRICE,
@@ -244,15 +333,9 @@ def health():
 def tsre_daily(request: Request):
     request_id = str(uuid.uuid4())
     started = time.perf_counter()
-    feed_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)),
-        "feeds",
-        "tsre_daily.json",
-    )
 
     try:
-        with open(feed_path, "r", encoding="utf-8") as feed_file:
-            payload = json.load(feed_file)
+        payload = load_tsre_daily()
 
         latency_ms = round((time.perf_counter() - started) * 1000)
         log_event = {
@@ -427,7 +510,7 @@ Return ONLY valid JSON using exactly this structure:
 def agent_discovery():
     return {
         "name": "Machine Job Fishing Net",
-        "version": "0.6.0",
+        "version": "0.7.0",
         "description": "Experimental machine-callable jobs.",
         "jobs": [
             {
@@ -518,3 +601,24 @@ async def buyer_wallet_test():
             "status": "ok",
             "address": account.address
         }
+
+
+mcp_app = mcp.streamable_http_app(
+    streamable_http_path="/",
+    stateless_http=True,
+    json_response=True,
+    transport_security=TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=[
+            "machine-job-fishing-net.onrender.com",
+            "127.0.0.1:*",
+            "localhost:*",
+        ],
+        allowed_origins=[
+            "https://machine-job-fishing-net.onrender.com",
+            "http://127.0.0.1:*",
+            "http://localhost:*",
+        ],
+    ),
+)
+app.mount("/mcp", mcp_app)
