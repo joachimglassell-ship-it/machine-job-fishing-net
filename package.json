@@ -1,0 +1,19 @@
+{
+  "name": "machine-job-fishing-net-buyer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "buyer-test": "tsx buyer-test.ts"
+  },
+  "dependencies": {
+    "@coinbase/cdp-sdk": "latest",
+    "@x402/core": "latest",
+    "@x402/evm": "latest",
+    "@x402/fetch": "latest"
+  },
+  "devDependencies": {
+    "tsx": "latest",
+    "typescript": "latest"
+  }
+}
