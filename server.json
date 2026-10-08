@@ -1,0 +1,17 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.joachimglassell-ship-it/tsre-swedish-equities",
+  "title": "TSRE Swedish Equity Intelligence",
+  "description": "Free daily machine-readable research on Swedish equities, including market regimes, market breadth, sector rotation, RS20 candidates and Tactical Radar. Research decision support only; not autonomous investment advice or a buy/sell signal.",
+  "version": "1.0.0",
+  "repository": {
+    "url": "https://github.com/joachimglassell-ship-it/machine-job-fishing-net",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://machine-job-fishing-net.onrender.com/mcp/"
+    }
+  ]
+}
