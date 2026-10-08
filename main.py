@@ -312,4 +312,16 @@ async def wallet_test():
         return {
             "status": "ok",
             "address": account.address
+        } 
+        
+@app.get("/internal/buyer-wallet-test")
+async def buyer_wallet_test():
+    async with CdpClient() as cdp:
+        account = await cdp.evm.get_or_create_account(
+            name="machine-job-buyer"
+        )
+
+        return {
+            "status": "ok",
+            "address": account.address
         }
