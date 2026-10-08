@@ -9,9 +9,10 @@ from fastapi import FastAPI, HTTPException, Request
 from openai import OpenAI
 from pydantic import BaseModel, Field
 from cdp import CdpClient
+from cdp.x402 import create_facilitator_config
 
 from x402.extensions.bazaar import OutputConfig, declare_discovery_extension
-from x402.http import FacilitatorConfig, HTTPFacilitatorClient, PaymentOption
+from x402.http import HTTPFacilitatorClient, PaymentOption
 from x402.http.middleware.fastapi import PaymentMiddlewareASGI
 from x402.http.types import RouteConfig
 from x402.mechanisms.evm.exact import ExactEvmServerScheme
@@ -21,21 +22,21 @@ from x402.server import x402ResourceServer
 PAY_TO_ADDRESS = "0x3b0946177F281eF9C7CcEE152ec1A7F41Cc5A468"
 NETWORK = "eip155:84532"
 PRICE = "$0.01"
-FACILITATOR_URL = "https://x402.org/facilitator"
 
 
 app = FastAPI(
     title="Machine Job Fishing Net",
-    version="0.4.0",
+    version="0.5.0",
     description="Experimental machine-callable jobs."
 )
+
 
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 
-# x402 payment infrastructure
+# x402 payment infrastructure using Coinbase CDP hosted facilitator
 facilitator = HTTPFacilitatorClient(
-    FacilitatorConfig(url=FACILITATOR_URL)
+    create_facilitator_config()
 )
 
 payment_server = x402ResourceServer(facilitator)
@@ -43,6 +44,7 @@ payment_server.register(
     NETWORK,
     ExactEvmServerScheme()
 )
+
 
 payment_routes = {
     "POST /v1/find-official-source": RouteConfig(
@@ -175,6 +177,7 @@ payment_routes = {
     )
 }
 
+
 app.add_middleware(
     PaymentMiddlewareASGI,
     routes=payment_routes,
@@ -222,7 +225,7 @@ class SourceResponse(BaseModel):
 def root():
     return {
         "service": "Machine Job Fishing Net",
-        "version": "0.4.0",
+        "version": "0.5.0",
         "jobs": ["find_official_source"],
         "payment": {
             "protocol": "x402",
@@ -372,7 +375,7 @@ Return ONLY valid JSON using exactly this structure:
 def agent_discovery():
     return {
         "name": "Machine Job Fishing Net",
-        "version": "0.4.0",
+        "version": "0.5.0",
         "description": "Experimental machine-callable jobs.",
         "jobs": [
             {
