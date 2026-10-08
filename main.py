@@ -10,6 +10,7 @@ from openai import OpenAI
 from pydantic import BaseModel, Field
 from cdp import CdpClient
 
+from x402.extensions.bazaar import OutputConfig, declare_discovery_extension
 from x402.http import FacilitatorConfig, HTTPFacilitatorClient, PaymentOption
 from x402.http.middleware.fastapi import PaymentMiddlewareASGI
 from x402.http.types import RouteConfig
@@ -25,7 +26,7 @@ FACILITATOR_URL = "https://x402.org/facilitator"
 
 app = FastAPI(
     title="Machine Job Fishing Net",
-    version="0.3.0",
+    version="0.4.0",
     description="Experimental machine-callable jobs."
 )
 
@@ -53,9 +54,123 @@ payment_routes = {
                 pay_to=PAY_TO_ADDRESS,
             )
         ],
+        mime_type="application/json",
         description=(
             "Find the best available primary or official source for an "
             "entity, claim, document, or topic."
+        ),
+        extensions=declare_discovery_extension(
+            input={
+                "query": "Ericsson annual report 2025"
+            },
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "minLength": 3,
+                        "maxLength": 1000,
+                        "description": (
+                            "Entity, claim, document or topic for which "
+                            "an official source is requested."
+                        ),
+                    }
+                },
+                "required": ["query"],
+            },
+            body_type="json",
+            output=OutputConfig(
+                example={
+                    "status": "found",
+                    "query": "Ericsson annual report 2025",
+                    "official_source": {
+                        "title": "Ericsson Annual Report 2025",
+                        "url": "https://www.ericsson.com/",
+                        "publisher": "Ericsson",
+                        "source_type": "company",
+                    },
+                    "source_date": "2026-01-01",
+                    "relevant_evidence": (
+                        "Official company source containing the requested "
+                        "annual report."
+                    ),
+                    "confidence": 0.95,
+                    "checked_at": "2026-10-08T08:00:00+00:00",
+                    "request_id": "example-request-id",
+                },
+                schema={
+                    "type": "object",
+                    "properties": {
+                        "status": {
+                            "type": "string",
+                            "enum": ["found", "not_found"],
+                        },
+                        "query": {
+                            "type": "string",
+                        },
+                        "official_source": {
+                            "anyOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "title": {"type": "string"},
+                                        "url": {"type": "string"},
+                                        "publisher": {"type": "string"},
+                                        "source_type": {
+                                            "type": "string",
+                                            "enum": [
+                                                "company",
+                                                "government",
+                                                "regulator",
+                                                "court",
+                                                "official_organization",
+                                                "other_official",
+                                            ],
+                                        },
+                                    },
+                                    "required": [
+                                        "title",
+                                        "url",
+                                        "publisher",
+                                        "source_type",
+                                    ],
+                                },
+                                {"type": "null"},
+                            ]
+                        },
+                        "source_date": {
+                            "anyOf": [
+                                {"type": "string"},
+                                {"type": "null"},
+                            ]
+                        },
+                        "relevant_evidence": {
+                            "anyOf": [
+                                {"type": "string"},
+                                {"type": "null"},
+                            ]
+                        },
+                        "confidence": {
+                            "type": "number",
+                            "minimum": 0.0,
+                            "maximum": 1.0,
+                        },
+                        "checked_at": {
+                            "type": "string",
+                        },
+                        "request_id": {
+                            "type": "string",
+                        },
+                    },
+                    "required": [
+                        "status",
+                        "query",
+                        "confidence",
+                        "checked_at",
+                        "request_id",
+                    ],
+                },
+            ),
         ),
     )
 }
@@ -107,7 +222,7 @@ class SourceResponse(BaseModel):
 def root():
     return {
         "service": "Machine Job Fishing Net",
-        "version": "0.3.0",
+        "version": "0.4.0",
         "jobs": ["find_official_source"],
         "payment": {
             "protocol": "x402",
@@ -257,7 +372,7 @@ Return ONLY valid JSON using exactly this structure:
 def agent_discovery():
     return {
         "name": "Machine Job Fishing Net",
-        "version": "0.3.0",
+        "version": "0.4.0",
         "description": "Experimental machine-callable jobs.",
         "jobs": [
             {
@@ -312,8 +427,9 @@ async def wallet_test():
         return {
             "status": "ok",
             "address": account.address
-        } 
-        
+        }
+
+
 @app.get("/internal/buyer-wallet-test")
 async def buyer_wallet_test():
     async with CdpClient() as cdp:
