@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.joachimglassell-ship-it/company-delta",
   "title": "Company Delta",
-  "description": "Detect material changes in public companies since a specified baseline date using primarily official and primary sources.",
+  "description": "Detect material changes in public companies since a specified date using primary sources.",
   "version": "1.0.0",
   "repository": {
     "url": "https://github.com/joachimglassell-ship-it/machine-job-fishing-net",
