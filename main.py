@@ -1,12 +1,15 @@
+import asyncio
 import json
 import os
+import secrets
 import time
 import uuid
+from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Any, AsyncIterator, Literal, Optional
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 from mcp.server.mcpserver import Context, MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
 from openai import OpenAI
@@ -25,6 +28,19 @@ from x402.server import x402ResourceServer
 PAY_TO_ADDRESS = "0x3b0946177F281eF9C7CcEE152ec1A7F41Cc5A468"
 NETWORK = "eip155:84532"
 PRICE = "$0.01"
+PUBLIC_BASE_URL = os.environ.get(
+    "PUBLIC_BASE_URL",
+    "https://machine-job-fishing-net.onrender.com",
+).rstrip("/")
+A2A_MAX_CONCURRENT_JOBS = max(
+    1,
+    int(os.environ.get("A2A_MAX_CONCURRENT_JOBS", "1")),
+)
+A2A_RATE_LIMIT_PER_HOUR = max(
+    1,
+    int(os.environ.get("A2A_RATE_LIMIT_PER_HOUR", "3")),
+)
+A2A_INTERNAL_TEST_TOKEN = os.environ.get("A2A_INTERNAL_TEST_TOKEN", "")
 
 FEED_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
@@ -659,6 +675,167 @@ class CompanyDeltaResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# MINIMAL A2A V1 TASK STORE
+# ---------------------------------------------------------------------------
+
+A2A_TASKS: dict[str, dict[str, Any]] = {}
+A2A_MESSAGE_TASKS: dict[str, str] = {}
+A2A_ACTIVE_JOBS = 0
+A2A_STATE_LOCK = asyncio.Lock()
+A2A_BACKGROUND_TASKS: set[asyncio.Task[Any]] = set()
+A2A_REQUEST_TIMES: dict[str, deque[float]] = defaultdict(deque)
+
+
+def utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def a2a_client_metadata(request: Request) -> dict[str, Any]:
+    forwarded = request.headers.get("x-forwarded-for", "")
+    client_ip = forwarded.split(",", 1)[0].strip() or (
+        request.client.host if request.client else "unknown"
+    )
+    supplied_token = request.headers.get("x-a2a-test-token", "")
+    internal = bool(
+        A2A_INTERNAL_TEST_TOKEN
+        and supplied_token
+        and secrets.compare_digest(supplied_token, A2A_INTERNAL_TEST_TOKEN)
+    )
+    return {
+        "client": client_ip,
+        "user_agent": request.headers.get("user-agent"),
+        "traffic_class": "internal_verification" if internal else "external",
+    }
+
+
+def a2a_log(event: str, **fields: Any) -> None:
+    print(json.dumps({"event": event, "timestamp": utc_now(), **fields}), flush=True)
+
+
+def a2a_error(request_id: Any, code: int, message: str) -> dict[str, Any]:
+    return {
+        "jsonrpc": "2.0",
+        "id": request_id,
+        "error": {"code": code, "message": message},
+    }
+
+
+def a2a_task_view(task: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: value
+        for key, value in task.items()
+        if not key.startswith("_")
+    }
+
+
+def extract_company_delta_input(params: Any) -> tuple[str, str, str, str]:
+    if not isinstance(params, dict):
+        raise ValueError("params must be an object.")
+    message = params.get("message")
+    if not isinstance(message, dict):
+        raise ValueError("params.message must be an object.")
+    if message.get("role") != "ROLE_USER":
+        raise ValueError("message.role must be ROLE_USER.")
+    message_id = message.get("messageId")
+    if not isinstance(message_id, str) or not message_id.strip():
+        raise ValueError("message.messageId is required.")
+    parts = message.get("parts")
+    if not isinstance(parts, list) or not parts:
+        raise ValueError("message.parts must contain structured input.")
+
+    payload = next(
+        (part.get("data") for part in parts if isinstance(part, dict) and isinstance(part.get("data"), dict)),
+        None,
+    )
+    if payload is None:
+        raise ValueError('Use a data part containing {"company": "...", "since": "YYYY-MM-DD"}.')
+    company = payload.get("company")
+    since = payload.get("since")
+    if not isinstance(company, str) or not 2 <= len(company.strip()) <= 200:
+        raise ValueError("company must be a string of 2-200 characters.")
+    if not isinstance(since, str):
+        raise ValueError("since must use ISO format YYYY-MM-DD.")
+    try:
+        baseline = datetime.strptime(since, "%Y-%m-%d").date()
+    except ValueError as exc:
+        raise ValueError("since must use ISO format YYYY-MM-DD.") from exc
+    if baseline > datetime.now(timezone.utc).date():
+        raise ValueError("since cannot be in the future.")
+    context_id = message.get("contextId") or str(uuid.uuid4())
+    return company.strip(), since, message_id.strip(), str(context_id)
+
+
+async def run_a2a_company_delta(task_id: str) -> None:
+    global A2A_ACTIVE_JOBS
+    task = A2A_TASKS[task_id]
+    started = time.perf_counter()
+    task["status"] = {"state": "TASK_STATE_WORKING", "timestamp": utc_now()}
+    a2a_log(
+        "a2a_job_started",
+        task_id=task_id,
+        message_id=task["_message_id"],
+        request_id=task["_request_id"],
+        company=task["_company"],
+        since=task["_since"],
+        status="TASK_STATE_WORKING",
+        **task["_client_metadata"],
+    )
+    try:
+        result = await asyncio.to_thread(
+            run_company_delta,
+            task["_company"],
+            task["_since"],
+        )
+        result["request_id"] = task["_request_id"]
+        task["artifacts"] = [{
+            "artifactId": str(uuid.uuid4()),
+            "name": "company_delta_result",
+            "description": "Structured Company Delta analysis result.",
+            "parts": [{"data": result, "mediaType": "application/json"}],
+        }]
+        task["status"] = {"state": "TASK_STATE_COMPLETED", "timestamp": utc_now()}
+        a2a_log(
+            "a2a_job_completed",
+            task_id=task_id,
+            message_id=task["_message_id"],
+            request_id=task["_request_id"],
+            company=task["_company"],
+            since=task["_since"],
+            status="TASK_STATE_COMPLETED",
+            material_changes_found=result.get("material_changes_found", 0),
+            latency_ms=round((time.perf_counter() - started) * 1000),
+            **task["_client_metadata"],
+        )
+    except Exception as exc:
+        task["status"] = {
+            "state": "TASK_STATE_FAILED",
+            "timestamp": utc_now(),
+            "message": {
+                "messageId": str(uuid.uuid4()),
+                "taskId": task_id,
+                "contextId": task["contextId"],
+                "role": "ROLE_AGENT",
+                "parts": [{"text": "Company Delta analysis failed."}],
+            },
+        }
+        a2a_log(
+            "a2a_job_failed",
+            task_id=task_id,
+            message_id=task["_message_id"],
+            request_id=task["_request_id"],
+            company=task["_company"],
+            since=task["_since"],
+            status="TASK_STATE_FAILED",
+            error_type=type(exc).__name__,
+            latency_ms=round((time.perf_counter() - started) * 1000),
+            **task["_client_metadata"],
+        )
+    finally:
+        async with A2A_STATE_LOCK:
+            A2A_ACTIVE_JOBS -= 1
+
+
+# ---------------------------------------------------------------------------
 # BASIC ROUTES
 # ---------------------------------------------------------------------------
 
@@ -1161,6 +1338,158 @@ def agent_discovery():
         "documentation": (
             "https://machine-job-fishing-net.onrender.com/docs"
         ),
+    }
+
+
+# ---------------------------------------------------------------------------
+# A2A V1 DISCOVERY AND JSON-RPC BINDING
+# ---------------------------------------------------------------------------
+
+@app.get("/.well-known/agent-card.json")
+def a2a_agent_card(request: Request, response: Response):
+    card = {
+        "name": "Company Delta",
+        "description": (
+            "Detects material changes in a public company between a baseline "
+            "date and today, with source provenance. Research intelligence only."
+        ),
+        "supportedInterfaces": [{
+            "url": f"{PUBLIC_BASE_URL}/a2a/company-delta",
+            "protocolBinding": "JSONRPC",
+            "protocolVersion": "1.0",
+        }],
+        "version": "1.0.0",
+        "documentationUrl": f"{PUBLIC_BASE_URL}/docs",
+        "capabilities": {
+            "streaming": False,
+            "pushNotifications": False,
+            "extendedAgentCard": False,
+        },
+        "defaultInputModes": ["application/json"],
+        "defaultOutputModes": ["application/json"],
+        "skills": [{
+            "id": "company_delta",
+            "name": "Company Delta",
+            "description": (
+                "Find verified, material company changes since a supplied ISO date."
+            ),
+            "tags": ["company research", "change detection", "primary sources"],
+            "examples": [
+                '{"company":"Intel Corporation","since":"2024-12-01"}'
+            ],
+            "inputModes": ["application/json"],
+            "outputModes": ["application/json"],
+        }],
+    }
+    etag = '"company-delta-a2a-v1"'
+    response.headers["Cache-Control"] = "public, max-age=300"
+    response.headers["ETag"] = etag
+    metadata = a2a_client_metadata(request)
+    a2a_log(
+        "a2a_agent_card_fetch",
+        request_id=request.headers.get("x-request-id") or str(uuid.uuid4()),
+        status="ok",
+        **metadata,
+    )
+    return card
+
+
+@app.post("/a2a/company-delta")
+async def a2a_company_delta(request: Request):
+    global A2A_ACTIVE_JOBS
+    protocol_started = time.perf_counter()
+    metadata = a2a_client_metadata(request)
+    try:
+        body = await request.json()
+    except Exception:
+        return a2a_error(None, -32700, "Invalid JSON payload")
+
+    rpc_id = body.get("id") if isinstance(body, dict) else None
+    method = body.get("method") if isinstance(body, dict) else None
+    params = body.get("params") if isinstance(body, dict) else None
+    a2a_log(
+        "a2a_message_received",
+        request_id=rpc_id,
+        method=method,
+        status="received",
+        **metadata,
+    )
+    if not isinstance(body, dict) or body.get("jsonrpc") != "2.0" or "id" not in body:
+        return a2a_error(rpc_id, -32600, "Request payload validation error")
+    requested_version = request.headers.get("a2a-version")
+    if requested_version and requested_version != "1.0":
+        return a2a_error(rpc_id, -32009, "Version not supported")
+
+    if method == "GetTask":
+        task_id = params.get("id") if isinstance(params, dict) else None
+        task = A2A_TASKS.get(task_id) if isinstance(task_id, str) else None
+        if task is None:
+            return a2a_error(rpc_id, -32001, "Task not found")
+        return {"jsonrpc": "2.0", "id": rpc_id, "result": a2a_task_view(task)}
+
+    if method != "SendMessage":
+        return a2a_error(rpc_id, -32601, "Method not found")
+
+    try:
+        company, since, message_id, context_id = extract_company_delta_input(params)
+    except ValueError as exc:
+        return a2a_error(rpc_id, -32602, str(exc))
+
+    existing_task_id = A2A_MESSAGE_TASKS.get(message_id)
+    if existing_task_id:
+        return {
+            "jsonrpc": "2.0",
+            "id": rpc_id,
+            "result": {"task": a2a_task_view(A2A_TASKS[existing_task_id])},
+        }
+
+    now = time.monotonic()
+    client_key = metadata["client"]
+    async with A2A_STATE_LOCK:
+        recent = A2A_REQUEST_TIMES[client_key]
+        while recent and now - recent[0] >= 3600:
+            recent.popleft()
+        if len(recent) >= A2A_RATE_LIMIT_PER_HOUR:
+            return a2a_error(rpc_id, -32603, "A2A job rate limit reached; retry later.")
+        if A2A_ACTIVE_JOBS >= A2A_MAX_CONCURRENT_JOBS:
+            return a2a_error(rpc_id, -32603, "Company Delta is busy; retry later.")
+        recent.append(now)
+        A2A_ACTIVE_JOBS += 1
+
+        task_id = str(uuid.uuid4())
+        task = {
+            "id": task_id,
+            "contextId": context_id,
+            "status": {"state": "TASK_STATE_SUBMITTED", "timestamp": utc_now()},
+            "history": [params["message"]],
+            "_company": company,
+            "_since": since,
+            "_message_id": message_id,
+            "_request_id": str(rpc_id),
+            "_client_metadata": metadata,
+        }
+        A2A_TASKS[task_id] = task
+        A2A_MESSAGE_TASKS[message_id] = task_id
+
+    background = asyncio.create_task(run_a2a_company_delta(task_id))
+    A2A_BACKGROUND_TASKS.add(background)
+    background.add_done_callback(A2A_BACKGROUND_TASKS.discard)
+    a2a_log(
+        "a2a_protocol_interaction",
+        request_id=rpc_id,
+        method=method,
+        task_id=task_id,
+        message_id=message_id,
+        company=company,
+        since=since,
+        status="TASK_STATE_SUBMITTED",
+        latency_ms=round((time.perf_counter() - protocol_started) * 1000),
+        **metadata,
+    )
+    return {
+        "jsonrpc": "2.0",
+        "id": rpc_id,
+        "result": {"task": a2a_task_view(task)},
     }
 
 

@@ -1,6 +1,56 @@
 # machine-job-fishing-net
 V0 experiment for machine-callable jobs and agent demand discovery
 
+## Company Delta A2A v1 experiment
+
+The service publishes a minimal A2A 1.0 Agent Card at
+`/.well-known/agent-card.json` and accepts JSON-RPC at
+`/a2a/company-delta`. `SendMessage` starts a tracked Company Delta task and
+`GetTask` polls it. Discovery and polling never run the analysis engine.
+
+Send structured input as an A2A data part:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "request-1",
+  "method": "SendMessage",
+  "params": {
+    "message": {
+      "messageId": "message-1",
+      "role": "ROLE_USER",
+      "parts": [
+        {"data": {"company": "Intel Corporation", "since": "2024-12-01"}}
+      ]
+    },
+    "configuration": {"returnImmediately": true}
+  }
+}
+```
+
+Poll the returned task ID with `GetTask`. Completed output is an
+`application/json` artifact. Cost safeguards default to one concurrent A2A job
+and three accepted jobs per client IP per hour. Configure them with
+`A2A_MAX_CONCURRENT_JOBS` and `A2A_RATE_LIMIT_PER_HOUR`.
+
+For controlled production verification, set `A2A_INTERNAL_TEST_TOKEN` and send
+its value only in the `X-A2A-Test-Token` header. This labels the traffic as
+internal in structured logs without logging the token.
+
+Local setup and tests:
+
+```text
+python -m venv .venv
+.venv/Scripts/activate
+python -m pip install -r requirements-dev.txt
+set OPENAI_API_KEY=your-key
+python -m pytest -q
+uvicorn main:app --reload
+```
+
+The tests mock the costly OpenAI-backed analysis. A real Company Delta job
+requires `OPENAI_API_KEY`; never commit that value.
+
 ## TSRE MCP server
 
 The service exposes one free MCP tool over the standard Streamable HTTP
