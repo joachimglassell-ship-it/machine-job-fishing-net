@@ -39,6 +39,13 @@ def load_tsre_daily() -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# OPENAI CLIENT
+# ---------------------------------------------------------------------------
+
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+
+# ---------------------------------------------------------------------------
 # TSRE MCP SERVER
 # ---------------------------------------------------------------------------
 
@@ -54,7 +61,7 @@ mcp = MCPServer(
         "Preserve the included research contract when interpreting the data."
     ),
     website_url="https://machine-job-fishing-net.onrender.com",
-    version="0.7.0",
+    version="0.8.0",
 )
 
 
@@ -109,10 +116,278 @@ def get_sweden_market_intelligence(ctx: Context) -> dict[str, Any]:
         raise
 
 
+# ---------------------------------------------------------------------------
+# COMPANY DELTA ANALYSIS ENGINE
+# ---------------------------------------------------------------------------
+
+def run_company_delta(
+    company: str,
+    since: str,
+) -> dict[str, Any]:
+
+    checked_at = datetime.now(timezone.utc)
+    today = checked_at.date().isoformat()
+
+    try:
+        baseline_date = datetime.strptime(
+            since,
+            "%Y-%m-%d",
+        ).date()
+    except ValueError as exc:
+        raise ValueError(
+            "since must use ISO format YYYY-MM-DD."
+        ) from exc
+
+    if baseline_date > checked_at.date():
+        raise ValueError("since cannot be in the future.")
+
+    instructions = f"""
+You are a conservative company change-detection engine working for another machine.
+
+COMPANY:
+{company}
+
+BASELINE DATE:
+{since}
+
+CURRENT DATE:
+{today}
+
+Your task is NOT to summarize the company and NOT to list recent news.
+
+Your task is to identify MATERIAL CHANGES between the company's state at
+the baseline date and its subsequent state up to the current date.
+
+A publication after the baseline date is NOT automatically a change.
+
+For every reported change:
+
+1. Establish the prior state at or reasonably close to the baseline date.
+2. Establish the subsequent state.
+3. Explain precisely what changed.
+4. Assess whether the change is materially relevant to an external
+   decision-maker.
+5. Prefer primary-source evidence for both states.
+
+PRIMARY SOURCE PRIORITY:
+1. Official company filings, reports and investor-relations material.
+2. Stock-exchange or regulatory disclosures.
+3. Government agencies, regulators and courts.
+4. Other authoritative primary sources.
+
+Secondary sources may help discovery, but should not be used as substitutes
+when primary evidence is available.
+
+MATERIALITY:
+
+HIGH:
+A change likely to alter a rational external decision-maker's view of the
+company in a significant way.
+
+MEDIUM:
+A genuine and potentially decision-relevant change that does not by itself
+materially alter the overall company picture.
+
+Do not return LOW-materiality items.
+
+ALLOWED CATEGORIES:
+guidance
+financial_performance
+financial_targets
+capital_allocation
+management
+strategy
+operations
+products
+markets
+major_contracts
+m_and_a
+financing
+legal_regulatory
+ownership
+other_material
+
+CRITICAL RULES:
+
+- Do not invent a prior state.
+- Do not invent dates, facts, values, sources or URLs.
+- Only return URLs supported by web search.
+- Do not classify ordinary news as a delta merely because it is new.
+- Prefer omission over a weak or speculative delta.
+- If you identify potentially material new information but cannot establish
+  the prior state, set comparison_status to "baseline_not_established".
+- Such an item must NOT be described as a verified change.
+- If no material changes can be established, return an empty changes array.
+- This is research intelligence, not investment advice.
+
+Return ONLY valid JSON using exactly this structure:
+
+{{
+  "status": "ok" or "not_found",
+  "company": "{company}",
+  "changes": [
+    {{
+      "category": "one allowed category",
+      "materiality": "high|medium",
+      "summary": "concise description",
+      "before": "verified prior state or null",
+      "after": "verified subsequent state",
+      "effective_date": "YYYY-MM-DD or null",
+      "comparison_status": "verified_change|baseline_not_established",
+      "evidence": "brief explanation of the comparison and evidence",
+      "sources": [
+        {{
+          "title": "...",
+          "publisher": "...",
+          "date": "YYYY-MM-DD or null",
+          "url": "..."
+        }}
+      ],
+      "confidence": 0.0
+    }}
+  ]
+}}
+"""
+
+    response = client.responses.create(
+        model="gpt-5-mini",
+        tools=[{"type": "web_search"}],
+        instructions=instructions,
+        input=(
+            f"Detect material changes at {company} "
+            f"since {since}."
+        ),
+    )
+
+    result = json.loads(response.output_text)
+
+    if result.get("status") not in {"ok", "not_found"}:
+        raise ValueError("Invalid Company Delta status.")
+
+    raw_changes = result.get("changes", [])
+
+    if not isinstance(raw_changes, list):
+        raise ValueError("Company Delta changes must be a list.")
+
+    verified_count = sum(
+        1
+        for change in raw_changes
+        if change.get("comparison_status") == "verified_change"
+    )
+
+    return {
+        "status": result["status"],
+        "company": result.get("company", company),
+        "period_from": since,
+        "period_to": today,
+        "changes": raw_changes,
+        "material_changes_found": verified_count,
+        "checked_at": checked_at.isoformat(),
+    }
+
+
+# ---------------------------------------------------------------------------
+# COMPANY DELTA MCP SERVER
+# ---------------------------------------------------------------------------
+
+company_delta_mcp = MCPServer(
+    name="company-delta",
+    title="Company Delta",
+    description=(
+        "Machine-readable detection of material changes in public companies "
+        "between a baseline date and the current date, using primarily "
+        "official and other primary sources."
+    ),
+    instructions=(
+        "Use get_company_delta when you need to determine what materially "
+        "changed at a public company since a specified date. The tool returns "
+        "structured before-and-after changes with source provenance. "
+        "Do not treat the output as investment advice."
+    ),
+    website_url="https://machine-job-fishing-net.onrender.com",
+    version="1.0.0",
+)
+
+
+@company_delta_mcp.tool(
+    name="get_company_delta",
+    description=(
+        "Identify material changes in a public company between a baseline "
+        "date and the current date. Returns structured before-and-after "
+        "changes with evidence and source provenance. Research intelligence only."
+    ),
+    structured_output=True,
+)
+def get_company_delta(
+    company: str,
+    since: str,
+    ctx: Context,
+) -> dict[str, Any]:
+
+    request_id = ctx.request_id
+    started = time.perf_counter()
+    headers = ctx.headers or {}
+
+    try:
+        result = run_company_delta(
+            company=company,
+            since=since,
+        )
+
+        result["request_id"] = str(request_id)
+
+        log_event = {
+            "event": "company_delta_mcp_tool_call",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "tool": "get_company_delta",
+            "request_id": request_id,
+            "company": company,
+            "since": since,
+            "success": True,
+            "result_status": result.get("status"),
+            "changes_returned": len(result.get("changes", [])),
+            "verified_changes": result.get("material_changes_found", 0),
+            "latency_ms": round(
+                (time.perf_counter() - started) * 1000
+            ),
+            "user_agent": headers.get("user-agent"),
+            "protocol_version": ctx.protocol_version,
+        }
+
+        print(json.dumps(log_event), flush=True)
+
+        return result
+
+    except Exception as exc:
+        log_event = {
+            "event": "company_delta_mcp_tool_call",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "tool": "get_company_delta",
+            "request_id": request_id,
+            "company": company,
+            "since": since,
+            "success": False,
+            "result_status": type(exc).__name__,
+            "latency_ms": round(
+                (time.perf_counter() - started) * 1000
+            ),
+            "user_agent": headers.get("user-agent"),
+            "protocol_version": ctx.protocol_version,
+        }
+
+        print(json.dumps(log_event), flush=True)
+        raise
+
+
+# ---------------------------------------------------------------------------
+# FASTAPI LIFESPAN
+# ---------------------------------------------------------------------------
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     async with mcp.session_manager.run():
-        yield
+        async with company_delta_mcp.session_manager.run():
+            yield
 
 
 # ---------------------------------------------------------------------------
@@ -121,13 +396,10 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(
     title="Machine Job Fishing Net",
-    version="0.8.0",
+    version="0.9.0",
     description="Experimental machine-callable jobs.",
     lifespan=lifespan,
 )
-
-
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 
 # ---------------------------------------------------------------------------
@@ -394,17 +666,35 @@ class CompanyDeltaResponse(BaseModel):
 def root():
     return {
         "service": "Machine Job Fishing Net",
-        "version": "0.8.0",
+        "version": "0.9.0",
         "jobs": [
             "find_official_source",
             "tsre_daily_investment_desk",
             "company_delta",
         ],
-        "mcp": {
-            "transport": "streamable-http",
-            "endpoint": "https://machine-job-fishing-net.onrender.com/mcp/",
-            "tools": ["get_sweden_market_intelligence"],
-        },
+        "mcp_servers": [
+            {
+                "name": "TSRE Swedish Equity Intelligence",
+                "transport": "streamable-http",
+                "endpoint": (
+                    "https://machine-job-fishing-net.onrender.com/mcp/"
+                ),
+                "tools": [
+                    "get_sweden_market_intelligence"
+                ],
+            },
+            {
+                "name": "Company Delta",
+                "transport": "streamable-http",
+                "endpoint": (
+                    "https://machine-job-fishing-net.onrender.com/"
+                    "company-delta/mcp/"
+                ),
+                "tools": [
+                    "get_company_delta"
+                ],
+            },
+        ],
         "payment": {
             "protocol": "x402",
             "price": PRICE,
@@ -430,7 +720,9 @@ def tsre_daily(request: Request):
     try:
         payload = load_tsre_daily()
 
-        latency_ms = round((time.perf_counter() - started) * 1000)
+        latency_ms = round(
+            (time.perf_counter() - started) * 1000
+        )
 
         log_event = {
             "event": "tsre_daily_call",
@@ -449,7 +741,9 @@ def tsre_daily(request: Request):
         return payload
 
     except Exception as exc:
-        latency_ms = round((time.perf_counter() - started) * 1000)
+        latency_ms = round(
+            (time.perf_counter() - started) * 1000
+        )
 
         log_event = {
             "event": "tsre_daily_call",
@@ -498,8 +792,10 @@ def write_call_log(
 
 
 @app.post("/v1/find-official-source", response_model=SourceResponse)
-def find_official_source(payload: SourceRequest, request: Request):
-
+def find_official_source(
+    payload: SourceRequest,
+    request: Request,
+):
     request_id = str(uuid.uuid4())
     started = time.perf_counter()
 
@@ -552,7 +848,9 @@ Return ONLY valid JSON using exactly this structure:
 
         result = json.loads(response.output_text)
 
-        latency_ms = round((time.perf_counter() - started) * 1000)
+        latency_ms = round(
+            (time.perf_counter() - started) * 1000
+        )
 
         write_call_log(
             request_id=request_id,
@@ -574,7 +872,9 @@ Return ONLY valid JSON using exactly this structure:
         )
 
     except json.JSONDecodeError:
-        latency_ms = round((time.perf_counter() - started) * 1000)
+        latency_ms = round(
+            (time.perf_counter() - started) * 1000
+        )
 
         write_call_log(
             request_id=request_id,
@@ -590,7 +890,9 @@ Return ONLY valid JSON using exactly this structure:
         )
 
     except Exception as exc:
-        latency_ms = round((time.perf_counter() - started) * 1000)
+        latency_ms = round(
+            (time.perf_counter() - started) * 1000
+        )
 
         write_call_log(
             request_id=request_id,
@@ -607,168 +909,27 @@ Return ONLY valid JSON using exactly this structure:
 
 
 # ---------------------------------------------------------------------------
-# COMPANY DELTA V0
+# COMPANY DELTA REST ENDPOINT
 # ---------------------------------------------------------------------------
 
-@app.post("/v1/company-delta", response_model=CompanyDeltaResponse)
-def company_delta(payload: CompanyDeltaRequest, request: Request):
-
+@app.post(
+    "/v1/company-delta",
+    response_model=CompanyDeltaResponse,
+)
+def company_delta(
+    payload: CompanyDeltaRequest,
+    request: Request,
+):
     request_id = str(uuid.uuid4())
     started = time.perf_counter()
-    checked_at = datetime.now(timezone.utc)
-    today = checked_at.date().isoformat()
 
     try:
-        baseline_date = datetime.strptime(
-            payload.since,
-            "%Y-%m-%d",
-        ).date()
-    except ValueError:
-        raise HTTPException(
-            status_code=422,
-            detail="since must use ISO format YYYY-MM-DD.",
+        result = run_company_delta(
+            company=payload.company,
+            since=payload.since,
         )
 
-    if baseline_date > checked_at.date():
-        raise HTTPException(
-            status_code=422,
-            detail="since cannot be in the future.",
-        )
-
-    instructions = f"""
-You are a conservative company change-detection engine working for another machine.
-
-COMPANY:
-{payload.company}
-
-BASELINE DATE:
-{payload.since}
-
-CURRENT DATE:
-{today}
-
-Your task is NOT to summarize the company and NOT to list recent news.
-
-Your task is to identify MATERIAL CHANGES between the company's state at
-the baseline date and its subsequent state up to the current date.
-
-A publication after the baseline date is NOT automatically a change.
-
-For every reported change:
-
-1. Establish the prior state at or reasonably close to the baseline date.
-2. Establish the subsequent state.
-3. Explain precisely what changed.
-4. Assess whether the change is materially relevant to an external
-   decision-maker.
-5. Prefer primary-source evidence for both states.
-
-PRIMARY SOURCE PRIORITY:
-1. Official company filings, reports and investor-relations material.
-2. Stock-exchange or regulatory disclosures.
-3. Government agencies, regulators and courts.
-4. Other authoritative primary sources.
-
-Secondary sources may help discovery, but should not be used as substitutes
-when primary evidence is available.
-
-MATERIALITY:
-
-HIGH:
-A change likely to alter a rational external decision-maker's view of the
-company in a significant way.
-
-MEDIUM:
-A genuine and potentially decision-relevant change that does not by itself
-materially alter the overall company picture.
-
-Do not return LOW-materiality items.
-
-ALLOWED CATEGORIES:
-guidance
-financial_performance
-financial_targets
-capital_allocation
-management
-strategy
-operations
-products
-markets
-major_contracts
-m_and_a
-financing
-legal_regulatory
-ownership
-other_material
-
-CRITICAL RULES:
-
-- Do not invent a prior state.
-- Do not invent dates, facts, values, sources or URLs.
-- Only return URLs supported by web search.
-- Do not classify ordinary news as a delta merely because it is new.
-- Prefer omission over a weak or speculative delta.
-- If you identify potentially material new information but cannot establish
-  the prior state, set comparison_status to "baseline_not_established".
-- Such an item must NOT be described as a verified change.
-- If no material changes can be established, return an empty changes array.
-- This is research intelligence, not investment advice.
-
-Return ONLY valid JSON using exactly this structure:
-
-{{
-  "status": "ok" or "not_found",
-  "company": "{payload.company}",
-  "changes": [
-    {{
-      "category": "one allowed category",
-      "materiality": "high|medium",
-      "summary": "concise description",
-      "before": "verified prior state or null",
-      "after": "verified subsequent state",
-      "effective_date": "YYYY-MM-DD or null",
-      "comparison_status": "verified_change|baseline_not_established",
-      "evidence": "brief explanation of the comparison and evidence",
-      "sources": [
-        {{
-          "title": "...",
-          "publisher": "...",
-          "date": "YYYY-MM-DD or null",
-          "url": "..."
-        }}
-      ],
-      "confidence": 0.0
-    }}
-  ]
-}}
-"""
-
-    try:
-        response = client.responses.create(
-            model="gpt-5-mini",
-            tools=[{"type": "web_search"}],
-            instructions=instructions,
-            input=(
-                f"Detect material changes at {payload.company} "
-                f"since {payload.since}."
-            ),
-        )
-
-        result = json.loads(response.output_text)
-
-        if result.get("status") not in {"ok", "not_found"}:
-            raise ValueError("Invalid Company Delta status.")
-
-        raw_changes = result.get("changes", [])
-
-        if not isinstance(raw_changes, list):
-            raise ValueError("Company Delta changes must be a list.")
-
-        verified_count = sum(
-            1
-            for change in raw_changes
-            if change.get("comparison_status") == "verified_change"
-        )
+        result["request_id"] = request_id
 
         latency_ms = round(
             (time.perf_counter() - started) * 1000
@@ -776,31 +937,60 @@ Return ONLY valid JSON using exactly this structure:
 
         log_event = {
             "event": "company_delta_call",
-            "timestamp": checked_at.isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "job": "company_delta",
             "request_id": request_id,
             "company": payload.company,
             "since": payload.since,
             "success": True,
             "result_status": result["status"],
-            "changes_returned": len(raw_changes),
-            "verified_changes": verified_count,
+            "changes_returned": len(result.get("changes", [])),
+            "verified_changes": result.get(
+                "material_changes_found",
+                0,
+            ),
             "latency_ms": latency_ms,
-            "client": request.client.host if request.client else None,
+            "client": (
+                request.client.host
+                if request.client
+                else None
+            ),
             "user_agent": request.headers.get("user-agent"),
         }
 
         print(json.dumps(log_event), flush=True)
 
-        return CompanyDeltaResponse(
-            status=result["status"],
-            company=result.get("company", payload.company),
-            period_from=payload.since,
-            period_to=today,
-            changes=raw_changes,
-            material_changes_found=verified_count,
-            checked_at=checked_at.isoformat(),
-            request_id=request_id,
+        return CompanyDeltaResponse(**result)
+
+    except ValueError as exc:
+        latency_ms = round(
+            (time.perf_counter() - started) * 1000
+        )
+
+        print(
+            json.dumps({
+                "event": "company_delta_call",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "job": "company_delta",
+                "request_id": request_id,
+                "company": payload.company,
+                "since": payload.since,
+                "success": False,
+                "result_status": "invalid_request",
+                "latency_ms": latency_ms,
+                "client": (
+                    request.client.host
+                    if request.client
+                    else None
+                ),
+                "user_agent": request.headers.get("user-agent"),
+            }),
+            flush=True,
+        )
+
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc),
         )
 
     except json.JSONDecodeError:
@@ -811,7 +1001,7 @@ Return ONLY valid JSON using exactly this structure:
         print(
             json.dumps({
                 "event": "company_delta_call",
-                "timestamp": checked_at.isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "job": "company_delta",
                 "request_id": request_id,
                 "company": payload.company,
@@ -819,7 +1009,11 @@ Return ONLY valid JSON using exactly this structure:
                 "success": False,
                 "result_status": "invalid_output",
                 "latency_ms": latency_ms,
-                "client": request.client.host if request.client else None,
+                "client": (
+                    request.client.host
+                    if request.client
+                    else None
+                ),
                 "user_agent": request.headers.get("user-agent"),
             }),
             flush=True,
@@ -830,9 +1024,6 @@ Return ONLY valid JSON using exactly this structure:
             detail="Company Delta returned invalid structured output.",
         )
 
-    except HTTPException:
-        raise
-
     except Exception as exc:
         latency_ms = round(
             (time.perf_counter() - started) * 1000
@@ -841,7 +1032,7 @@ Return ONLY valid JSON using exactly this structure:
         print(
             json.dumps({
                 "event": "company_delta_call",
-                "timestamp": checked_at.isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "job": "company_delta",
                 "request_id": request_id,
                 "company": payload.company,
@@ -849,7 +1040,11 @@ Return ONLY valid JSON using exactly this structure:
                 "success": False,
                 "result_status": type(exc).__name__,
                 "latency_ms": latency_ms,
-                "client": request.client.host if request.client else None,
+                "client": (
+                    request.client.host
+                    if request.client
+                    else None
+                ),
                 "user_agent": request.headers.get("user-agent"),
             }),
             flush=True,
@@ -869,7 +1064,7 @@ Return ONLY valid JSON using exactly this structure:
 def agent_discovery():
     return {
         "name": "Machine Job Fishing Net",
-        "version": "0.8.0",
+        "version": "0.9.0",
         "description": "Experimental machine-callable jobs.",
         "jobs": [
             {
@@ -906,6 +1101,11 @@ def agent_discovery():
                     "https://machine-job-fishing-net.onrender.com/"
                     "v1/company-delta"
                 ),
+                "mcp_endpoint": (
+                    "https://machine-job-fishing-net.onrender.com/"
+                    "company-delta/mcp/"
+                ),
+                "mcp_tool": "get_company_delta",
                 "payment": None,
                 "input": {
                     "company": "string",
@@ -995,6 +1195,25 @@ async def buyer_wallet_test():
 
 
 # ---------------------------------------------------------------------------
+# MCP TRANSPORT SECURITY
+# ---------------------------------------------------------------------------
+
+transport_security = TransportSecuritySettings(
+    enable_dns_rebinding_protection=True,
+    allowed_hosts=[
+        "machine-job-fishing-net.onrender.com",
+        "127.0.0.1:*",
+        "localhost:*",
+    ],
+    allowed_origins=[
+        "https://machine-job-fishing-net.onrender.com",
+        "http://127.0.0.1:*",
+        "http://localhost:*",
+    ],
+)
+
+
+# ---------------------------------------------------------------------------
 # TSRE MCP MOUNT
 # ---------------------------------------------------------------------------
 
@@ -1002,19 +1221,24 @@ mcp_app = mcp.streamable_http_app(
     streamable_http_path="/",
     stateless_http=True,
     json_response=True,
-    transport_security=TransportSecuritySettings(
-        enable_dns_rebinding_protection=True,
-        allowed_hosts=[
-            "machine-job-fishing-net.onrender.com",
-            "127.0.0.1:*",
-            "localhost:*",
-        ],
-        allowed_origins=[
-            "https://machine-job-fishing-net.onrender.com",
-            "http://127.0.0.1:*",
-            "http://localhost:*",
-        ],
-    ),
+    transport_security=transport_security,
 )
 
 app.mount("/mcp", mcp_app)
+
+
+# ---------------------------------------------------------------------------
+# COMPANY DELTA MCP MOUNT
+# ---------------------------------------------------------------------------
+
+company_delta_mcp_app = company_delta_mcp.streamable_http_app(
+    streamable_http_path="/",
+    stateless_http=True,
+    json_response=True,
+    transport_security=transport_security,
+)
+
+app.mount(
+    "/company-delta/mcp",
+    company_delta_mcp_app,
+)
