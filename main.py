@@ -38,6 +38,10 @@ def load_tsre_daily() -> dict[str, Any]:
         return json.load(feed_file)
 
 
+# ---------------------------------------------------------------------------
+# TSRE MCP SERVER
+# ---------------------------------------------------------------------------
+
 mcp = MCPServer(
     name="machine-job-fishing-net",
     title="TSRE Swedish Equity Intelligence",
@@ -71,6 +75,7 @@ def get_sweden_market_intelligence(ctx: Context) -> dict[str, Any]:
 
     try:
         payload = load_tsre_daily()
+
         log_event = {
             "event": "mcp_tool_call",
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -83,8 +88,10 @@ def get_sweden_market_intelligence(ctx: Context) -> dict[str, Any]:
             "user_agent": headers.get("user-agent"),
             "protocol_version": ctx.protocol_version,
         }
+
         print(json.dumps(log_event), flush=True)
         return payload
+
     except Exception as exc:
         log_event = {
             "event": "mcp_tool_call",
@@ -97,6 +104,7 @@ def get_sweden_market_intelligence(ctx: Context) -> dict[str, Any]:
             "user_agent": headers.get("user-agent"),
             "protocol_version": ctx.protocol_version,
         }
+
         print(json.dumps(log_event), flush=True)
         raise
 
@@ -107,9 +115,13 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         yield
 
 
+# ---------------------------------------------------------------------------
+# FASTAPI APP
+# ---------------------------------------------------------------------------
+
 app = FastAPI(
     title="Machine Job Fishing Net",
-    version="0.7.0",
+    version="0.8.0",
     description="Experimental machine-callable jobs.",
     lifespan=lifespan,
 )
@@ -118,12 +130,16 @@ app = FastAPI(
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 
-# x402 payment infrastructure using Coinbase CDP hosted facilitator
+# ---------------------------------------------------------------------------
+# x402 PAYMENT INFRASTRUCTURE
+# ---------------------------------------------------------------------------
+
 facilitator = HTTPFacilitatorClient(
     create_facilitator_config()
 )
 
 payment_server = x402ResourceServer(facilitator)
+
 payment_server.register(
     NETWORK,
     ExactEvmServerScheme()
@@ -265,9 +281,13 @@ payment_routes = {
 app.add_middleware(
     PaymentMiddlewareASGI,
     routes=payment_routes,
-    server=payment_server
+    server=payment_server,
 )
 
+
+# ---------------------------------------------------------------------------
+# PYDANTIC MODELS
+# ---------------------------------------------------------------------------
 
 class SourceRequest(BaseModel):
     query: str = Field(
@@ -276,7 +296,7 @@ class SourceRequest(BaseModel):
         description=(
             "Entity, claim, document or topic for which an official "
             "source is requested."
-        )
+        ),
     )
 
 
@@ -290,7 +310,7 @@ class OfficialSource(BaseModel):
         "regulator",
         "court",
         "official_organization",
-        "other_official"
+        "other_official",
     ]
 
 
@@ -305,12 +325,81 @@ class SourceResponse(BaseModel):
     request_id: str
 
 
+class CompanyDeltaRequest(BaseModel):
+    company: str = Field(
+        min_length=2,
+        max_length=200,
+        description="Public company name or ticker.",
+    )
+    since: str = Field(
+        description="Baseline date in ISO format YYYY-MM-DD.",
+    )
+
+
+class DeltaSource(BaseModel):
+    title: str
+    publisher: str
+    date: Optional[str] = None
+    url: str
+
+
+class CompanyChange(BaseModel):
+    category: Literal[
+        "guidance",
+        "financial_performance",
+        "financial_targets",
+        "capital_allocation",
+        "management",
+        "strategy",
+        "operations",
+        "products",
+        "markets",
+        "major_contracts",
+        "m_and_a",
+        "financing",
+        "legal_regulatory",
+        "ownership",
+        "other_material",
+    ]
+    materiality: Literal["high", "medium"]
+    summary: str
+    before: Optional[str] = None
+    after: str
+    effective_date: Optional[str] = None
+    comparison_status: Literal[
+        "verified_change",
+        "baseline_not_established",
+    ]
+    evidence: str
+    sources: list[DeltaSource]
+    confidence: float = Field(ge=0.0, le=1.0)
+
+
+class CompanyDeltaResponse(BaseModel):
+    status: Literal["ok", "not_found"]
+    company: str
+    period_from: str
+    period_to: str
+    changes: list[CompanyChange]
+    material_changes_found: int
+    checked_at: str
+    request_id: str
+
+
+# ---------------------------------------------------------------------------
+# BASIC ROUTES
+# ---------------------------------------------------------------------------
+
 @app.get("/")
 def root():
     return {
         "service": "Machine Job Fishing Net",
-        "version": "0.7.0",
-        "jobs": ["find_official_source", "tsre_daily_investment_desk"],
+        "version": "0.8.0",
+        "jobs": [
+            "find_official_source",
+            "tsre_daily_investment_desk",
+            "company_delta",
+        ],
         "mcp": {
             "transport": "streamable-http",
             "endpoint": "https://machine-job-fishing-net.onrender.com/mcp/",
@@ -319,8 +408,8 @@ def root():
         "payment": {
             "protocol": "x402",
             "price": PRICE,
-            "network": NETWORK
-        }
+            "network": NETWORK,
+        },
     }
 
 
@@ -328,6 +417,10 @@ def root():
 def health():
     return {"status": "ok"}
 
+
+# ---------------------------------------------------------------------------
+# TSRE REST ENDPOINT
+# ---------------------------------------------------------------------------
 
 @app.get("/v1/tsre/daily")
 def tsre_daily(request: Request):
@@ -338,6 +431,7 @@ def tsre_daily(request: Request):
         payload = load_tsre_daily()
 
         latency_ms = round((time.perf_counter() - started) * 1000)
+
         log_event = {
             "event": "tsre_daily_call",
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -350,11 +444,13 @@ def tsre_daily(request: Request):
             "client": request.client.host if request.client else None,
             "user_agent": request.headers.get("user-agent"),
         }
+
         print(json.dumps(log_event), flush=True)
         return payload
 
     except Exception as exc:
         latency_ms = round((time.perf_counter() - started) * 1000)
+
         log_event = {
             "event": "tsre_daily_call",
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -366,21 +462,25 @@ def tsre_daily(request: Request):
             "client": request.client.host if request.client else None,
             "user_agent": request.headers.get("user-agent"),
         }
+
         print(json.dumps(log_event), flush=True)
+
         raise HTTPException(
             status_code=502,
-            detail="Current TSRE Daily Investment Desk is unavailable."
+            detail="Current TSRE Daily Investment Desk is unavailable.",
         )
 
 
-
+# ---------------------------------------------------------------------------
+# OFFICIAL SOURCE FINDER
+# ---------------------------------------------------------------------------
 
 def write_call_log(
     request_id: str,
     request: Request,
     success: bool,
     result_status: str,
-    latency_ms: int
+    latency_ms: int,
 ):
     log_event = {
         "event": "machine_job_call",
@@ -391,7 +491,7 @@ def write_call_log(
         "result_status": result_status,
         "latency_ms": latency_ms,
         "client": request.client.host if request.client else None,
-        "user_agent": request.headers.get("user-agent")
+        "user_agent": request.headers.get("user-agent"),
     }
 
     print(json.dumps(log_event), flush=True)
@@ -447,7 +547,7 @@ Return ONLY valid JSON using exactly this structure:
             model="gpt-5-mini",
             tools=[{"type": "web_search"}],
             instructions=instructions,
-            input=payload.query
+            input=payload.query,
         )
 
         result = json.loads(response.output_text)
@@ -459,7 +559,7 @@ Return ONLY valid JSON using exactly this structure:
             request=request,
             success=True,
             result_status=result["status"],
-            latency_ms=latency_ms
+            latency_ms=latency_ms,
         )
 
         return SourceResponse(
@@ -470,7 +570,7 @@ Return ONLY valid JSON using exactly this structure:
             relevant_evidence=result.get("relevant_evidence"),
             confidence=result.get("confidence", 0.0),
             checked_at=datetime.now(timezone.utc).isoformat(),
-            request_id=request_id
+            request_id=request_id,
         )
 
     except json.JSONDecodeError:
@@ -481,12 +581,12 @@ Return ONLY valid JSON using exactly this structure:
             request=request,
             success=False,
             result_status="invalid_output",
-            latency_ms=latency_ms
+            latency_ms=latency_ms,
         )
 
         raise HTTPException(
             status_code=502,
-            detail="Search completed but returned invalid structured output."
+            detail="Search completed but returned invalid structured output.",
         )
 
     except Exception as exc:
@@ -497,20 +597,279 @@ Return ONLY valid JSON using exactly this structure:
             request=request,
             success=False,
             result_status=type(exc).__name__,
-            latency_ms=latency_ms
+            latency_ms=latency_ms,
         )
 
         raise HTTPException(
             status_code=500,
-            detail=f"Job failed: {type(exc).__name__}"
+            detail=f"Job failed: {type(exc).__name__}",
         )
 
+
+# ---------------------------------------------------------------------------
+# COMPANY DELTA V0
+# ---------------------------------------------------------------------------
+
+@app.post("/v1/company-delta", response_model=CompanyDeltaResponse)
+def company_delta(payload: CompanyDeltaRequest, request: Request):
+
+    request_id = str(uuid.uuid4())
+    started = time.perf_counter()
+    checked_at = datetime.now(timezone.utc)
+    today = checked_at.date().isoformat()
+
+    try:
+        baseline_date = datetime.strptime(
+            payload.since,
+            "%Y-%m-%d",
+        ).date()
+    except ValueError:
+        raise HTTPException(
+            status_code=422,
+            detail="since must use ISO format YYYY-MM-DD.",
+        )
+
+    if baseline_date > checked_at.date():
+        raise HTTPException(
+            status_code=422,
+            detail="since cannot be in the future.",
+        )
+
+    instructions = f"""
+You are a conservative company change-detection engine working for another machine.
+
+COMPANY:
+{payload.company}
+
+BASELINE DATE:
+{payload.since}
+
+CURRENT DATE:
+{today}
+
+Your task is NOT to summarize the company and NOT to list recent news.
+
+Your task is to identify MATERIAL CHANGES between the company's state at
+the baseline date and its subsequent state up to the current date.
+
+A publication after the baseline date is NOT automatically a change.
+
+For every reported change:
+
+1. Establish the prior state at or reasonably close to the baseline date.
+2. Establish the subsequent state.
+3. Explain precisely what changed.
+4. Assess whether the change is materially relevant to an external
+   decision-maker.
+5. Prefer primary-source evidence for both states.
+
+PRIMARY SOURCE PRIORITY:
+1. Official company filings, reports and investor-relations material.
+2. Stock-exchange or regulatory disclosures.
+3. Government agencies, regulators and courts.
+4. Other authoritative primary sources.
+
+Secondary sources may help discovery, but should not be used as substitutes
+when primary evidence is available.
+
+MATERIALITY:
+
+HIGH:
+A change likely to alter a rational external decision-maker's view of the
+company in a significant way.
+
+MEDIUM:
+A genuine and potentially decision-relevant change that does not by itself
+materially alter the overall company picture.
+
+Do not return LOW-materiality items.
+
+ALLOWED CATEGORIES:
+guidance
+financial_performance
+financial_targets
+capital_allocation
+management
+strategy
+operations
+products
+markets
+major_contracts
+m_and_a
+financing
+legal_regulatory
+ownership
+other_material
+
+CRITICAL RULES:
+
+- Do not invent a prior state.
+- Do not invent dates, facts, values, sources or URLs.
+- Only return URLs supported by web search.
+- Do not classify ordinary news as a delta merely because it is new.
+- Prefer omission over a weak or speculative delta.
+- If you identify potentially material new information but cannot establish
+  the prior state, set comparison_status to "baseline_not_established".
+- Such an item must NOT be described as a verified change.
+- If no material changes can be established, return an empty changes array.
+- This is research intelligence, not investment advice.
+
+Return ONLY valid JSON using exactly this structure:
+
+{{
+  "status": "ok" or "not_found",
+  "company": "{payload.company}",
+  "changes": [
+    {{
+      "category": "one allowed category",
+      "materiality": "high|medium",
+      "summary": "concise description",
+      "before": "verified prior state or null",
+      "after": "verified subsequent state",
+      "effective_date": "YYYY-MM-DD or null",
+      "comparison_status": "verified_change|baseline_not_established",
+      "evidence": "brief explanation of the comparison and evidence",
+      "sources": [
+        {{
+          "title": "...",
+          "publisher": "...",
+          "date": "YYYY-MM-DD or null",
+          "url": "..."
+        }}
+      ],
+      "confidence": 0.0
+    }}
+  ]
+}}
+"""
+
+    try:
+        response = client.responses.create(
+            model="gpt-5-mini",
+            tools=[{"type": "web_search"}],
+            instructions=instructions,
+            input=(
+                f"Detect material changes at {payload.company} "
+                f"since {payload.since}."
+            ),
+        )
+
+        result = json.loads(response.output_text)
+
+        if result.get("status") not in {"ok", "not_found"}:
+            raise ValueError("Invalid Company Delta status.")
+
+        raw_changes = result.get("changes", [])
+
+        if not isinstance(raw_changes, list):
+            raise ValueError("Company Delta changes must be a list.")
+
+        verified_count = sum(
+            1
+            for change in raw_changes
+            if change.get("comparison_status") == "verified_change"
+        )
+
+        latency_ms = round(
+            (time.perf_counter() - started) * 1000
+        )
+
+        log_event = {
+            "event": "company_delta_call",
+            "timestamp": checked_at.isoformat(),
+            "job": "company_delta",
+            "request_id": request_id,
+            "company": payload.company,
+            "since": payload.since,
+            "success": True,
+            "result_status": result["status"],
+            "changes_returned": len(raw_changes),
+            "verified_changes": verified_count,
+            "latency_ms": latency_ms,
+            "client": request.client.host if request.client else None,
+            "user_agent": request.headers.get("user-agent"),
+        }
+
+        print(json.dumps(log_event), flush=True)
+
+        return CompanyDeltaResponse(
+            status=result["status"],
+            company=result.get("company", payload.company),
+            period_from=payload.since,
+            period_to=today,
+            changes=raw_changes,
+            material_changes_found=verified_count,
+            checked_at=checked_at.isoformat(),
+            request_id=request_id,
+        )
+
+    except json.JSONDecodeError:
+        latency_ms = round(
+            (time.perf_counter() - started) * 1000
+        )
+
+        print(
+            json.dumps({
+                "event": "company_delta_call",
+                "timestamp": checked_at.isoformat(),
+                "job": "company_delta",
+                "request_id": request_id,
+                "company": payload.company,
+                "since": payload.since,
+                "success": False,
+                "result_status": "invalid_output",
+                "latency_ms": latency_ms,
+                "client": request.client.host if request.client else None,
+                "user_agent": request.headers.get("user-agent"),
+            }),
+            flush=True,
+        )
+
+        raise HTTPException(
+            status_code=502,
+            detail="Company Delta returned invalid structured output.",
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as exc:
+        latency_ms = round(
+            (time.perf_counter() - started) * 1000
+        )
+
+        print(
+            json.dumps({
+                "event": "company_delta_call",
+                "timestamp": checked_at.isoformat(),
+                "job": "company_delta",
+                "request_id": request_id,
+                "company": payload.company,
+                "since": payload.since,
+                "success": False,
+                "result_status": type(exc).__name__,
+                "latency_ms": latency_ms,
+                "client": request.client.host if request.client else None,
+                "user_agent": request.headers.get("user-agent"),
+            }),
+            flush=True,
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Company Delta failed: {type(exc).__name__}",
+        )
+
+
+# ---------------------------------------------------------------------------
+# AGENT DISCOVERY
+# ---------------------------------------------------------------------------
 
 @app.get("/.well-known/agent.json")
 def agent_discovery():
     return {
         "name": "Machine Job Fishing Net",
-        "version": "0.7.0",
+        "version": "0.8.0",
         "description": "Experimental machine-callable jobs.",
         "jobs": [
             {
@@ -532,8 +891,36 @@ def agent_discovery():
                     "schema_version": "daily_investment_desk_v1.1",
                     "producer": "TSRE Daily Investment Desk",
                     "format": "application/json",
-                    "research_use": True
-                }
+                    "research_use": True,
+                },
+            },
+            {
+                "name": "company_delta",
+                "description": (
+                    "Detect material changes in a public company between "
+                    "a baseline date and the current date using primarily "
+                    "official and other primary sources."
+                ),
+                "method": "POST",
+                "endpoint": (
+                    "https://machine-job-fishing-net.onrender.com/"
+                    "v1/company-delta"
+                ),
+                "payment": None,
+                "input": {
+                    "company": "string",
+                    "since": "YYYY-MM-DD",
+                },
+                "output": {
+                    "status": "ok | not_found",
+                    "company": "string",
+                    "period_from": "YYYY-MM-DD",
+                    "period_to": "YYYY-MM-DD",
+                    "changes": "array",
+                    "material_changes_found": "integer",
+                    "checked_at": "string",
+                    "request_id": "string",
+                },
             },
             {
                 "name": "find_official_source",
@@ -551,10 +938,10 @@ def agent_discovery():
                     "scheme": "exact",
                     "price": PRICE,
                     "network": NETWORK,
-                    "environment": "testnet"
+                    "environment": "testnet",
                 },
                 "input": {
-                    "query": "string"
+                    "query": "string",
                 },
                 "output": {
                     "status": "found | not_found",
@@ -564,18 +951,22 @@ def agent_discovery():
                     "relevant_evidence": "string",
                     "confidence": "number",
                     "checked_at": "string",
-                    "request_id": "string"
-                }
-            }
+                    "request_id": "string",
+                },
+            },
         ],
         "openapi": (
             "https://machine-job-fishing-net.onrender.com/openapi.json"
         ),
         "documentation": (
             "https://machine-job-fishing-net.onrender.com/docs"
-        )
+        ),
     }
 
+
+# ---------------------------------------------------------------------------
+# TEMPORARY WALLET TEST ENDPOINTS
+# ---------------------------------------------------------------------------
 
 @app.get("/internal/wallet-test")
 async def wallet_test():
@@ -586,7 +977,7 @@ async def wallet_test():
 
         return {
             "status": "ok",
-            "address": account.address
+            "address": account.address,
         }
 
 
@@ -599,9 +990,13 @@ async def buyer_wallet_test():
 
         return {
             "status": "ok",
-            "address": account.address
+            "address": account.address,
         }
 
+
+# ---------------------------------------------------------------------------
+# TSRE MCP MOUNT
+# ---------------------------------------------------------------------------
 
 mcp_app = mcp.streamable_http_app(
     streamable_http_path="/",
@@ -621,4 +1016,5 @@ mcp_app = mcp.streamable_http_app(
         ],
     ),
 )
+
 app.mount("/mcp", mcp_app)
