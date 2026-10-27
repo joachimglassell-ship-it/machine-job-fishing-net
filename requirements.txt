@@ -4,4 +4,5 @@ openai
 x402[extensions]
 cdp-sdk
 httpx
+certifi>=2026.10.19
 mcp==2.3.0
