@@ -1,0 +1,26 @@
+{
+  "schema_version": "historical_edge_studies.v0.1",
+  "studies": {
+    "pead_sweden_positive_earnings_reaction": {
+      "status": "data_pending",
+      "market": "Sweden equities",
+      "event_definition": "Positive earnings reaction; exact verified research definition pending publication.",
+      "evaluation_period": "Pending verified PEAD research results.",
+      "horizons": {
+        "20": {
+          "sample_size": null,
+          "mean_return_pct": null,
+          "median_return_pct": null,
+          "positive_pct": null
+        }
+      },
+      "methodology": null,
+      "source": null,
+      "limitations": [
+        "Verified numerical PEAD results were not available in this repository when v0.1 was created.",
+        "No new backtest has been performed.",
+        "The event definition, methodology, sample period and data source must be verified before status can become ok."
+      ]
+    }
+  }
+}
