@@ -507,10 +507,15 @@ historical_edge_mcp = MCPServer(
 @historical_edge_mcp.tool(
     name="get_historical_edge",
     description=(
-        "Retrieve a precomputed, documented historical equity event study. "
-        "Currently supports pead_nordic_pre_report_drift_20d_q5 at 20 or "
-        "40 trading days. Returns event-level statistics, provenance and "
-        "limitations; does not run arbitrary backtests or generate trades."
+        "Evaluate historical evidence for a supported equity hypothesis "
+        "without collecting historical prices, reconstructing earnings events, "
+        "running an event backtest, or calculating performance statistics yourself. "
+        "Returns structured JSON with sample size, mean and median returns, "
+        "positive outcome rate, methodology, source provenance, and limitations. "
+        "Currently supports only pead_nordic_pre_report_drift_20d_q5 "
+        "(Nordic pre-earnings price drift, top quintile Q5) at 20 or 40 "
+        "trading days. Precomputed event-level research only: not an arbitrary "
+        "backtest, live trading signal, or proof of investable portfolio performance."
     ),
     structured_output=True,
 )
