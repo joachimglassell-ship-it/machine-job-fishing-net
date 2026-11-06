@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 from cdp import CdpClient
 from cdp.x402 import create_facilitator_config
 from reality_memory import MCPObservationMiddleware, log_reality_event
+from historical_edge import get_historical_edge as lookup_historical_edge
 
 from x402.extensions.bazaar import OutputConfig, declare_discovery_extension
 from x402.http import HTTPFacilitatorClient, PaymentOption
@@ -483,6 +484,79 @@ def get_company_delta(
 
 
 # ---------------------------------------------------------------------------
+# HISTORICAL EDGE MCP SERVER (INDEPENDENT EXPERIMENT)
+# ---------------------------------------------------------------------------
+
+historical_edge_mcp = MCPServer(
+    name="historical-edge",
+    title="Historical Edge",
+    description=(
+        "Read-only, source-traced historical equity event-study results. "
+        "Reports observed research statistics, not trading signals."
+    ),
+    instructions=(
+        "Use get_historical_edge for a supported study_id and horizon_days. "
+        "Unsupported or unverified studies return not_supported or not_available. "
+        "Do not interpret event-level returns as investable portfolio performance."
+    ),
+    website_url="https://machine-job-fishing-net.onrender.com",
+    version="0.1.0",
+)
+
+
+@historical_edge_mcp.tool(
+    name="get_historical_edge",
+    description=(
+        "Retrieve a precomputed, documented historical equity event study. "
+        "Currently supports pead_nordic_pre_report_drift_20d_q5 at 20 or "
+        "40 trading days. Returns event-level statistics, provenance and "
+        "limitations; does not run arbitrary backtests or generate trades."
+    ),
+    structured_output=True,
+)
+def historical_edge_tool(
+    study_id: str,
+    horizon_days: int,
+    ctx: Context,
+) -> dict[str, Any]:
+    started = time.perf_counter()
+    headers = ctx.headers or {}
+    try:
+        result = lookup_historical_edge(study_id, horizon_days)
+        log_reality_event(
+            "historical_edge_mcp_tool_call",
+            service="historical_edge",
+            tool="get_historical_edge",
+            request_id=str(ctx.request_id),
+            study_id=study_id,
+            horizon_days=horizon_days,
+            success=True,
+            result_status=result["status"],
+            latency_ms=round((time.perf_counter() - started) * 1000),
+            user_agent=headers.get("user-agent"),
+            protocol_version=ctx.protocol_version,
+            traffic_class="unverified",
+        )
+        return result
+    except Exception as exc:
+        log_reality_event(
+            "historical_edge_mcp_tool_call",
+            service="historical_edge",
+            tool="get_historical_edge",
+            request_id=str(ctx.request_id),
+            study_id=study_id,
+            horizon_days=horizon_days,
+            success=False,
+            result_status=type(exc).__name__,
+            latency_ms=round((time.perf_counter() - started) * 1000),
+            user_agent=headers.get("user-agent"),
+            protocol_version=ctx.protocol_version,
+            traffic_class="unverified",
+        )
+        raise
+
+
+# ---------------------------------------------------------------------------
 # FASTAPI LIFESPAN
 # ---------------------------------------------------------------------------
 
@@ -490,7 +564,8 @@ def get_company_delta(
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     async with mcp.session_manager.run():
         async with company_delta_mcp.session_manager.run():
-            yield
+            async with historical_edge_mcp.session_manager.run():
+                yield
 
 
 # ---------------------------------------------------------------------------
@@ -1663,4 +1738,21 @@ company_delta_mcp_app = company_delta_mcp.streamable_http_app(
 app.mount(
     "/company-delta/mcp",
     MCPObservationMiddleware(company_delta_mcp_app, service="company_delta"),
+)
+
+
+# ---------------------------------------------------------------------------
+# HISTORICAL EDGE MCP MOUNT
+# ---------------------------------------------------------------------------
+
+historical_edge_mcp_app = historical_edge_mcp.streamable_http_app(
+    streamable_http_path="/",
+    stateless_http=True,
+    json_response=True,
+    transport_security=transport_security,
+)
+
+app.mount(
+    "/historical-edge/mcp",
+    MCPObservationMiddleware(historical_edge_mcp_app, service="historical_edge"),
 )
