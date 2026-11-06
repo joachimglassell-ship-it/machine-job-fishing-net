@@ -1,0 +1,56 @@
+{
+  "schema_version": "historical_edge_studies.v0.1",
+  "studies": {
+    "pead_sweden_positive_earnings_reaction": {
+      "status": "data_pending",
+      "market": "Sweden equities",
+      "event_definition": "Positive earnings reaction; exact verified research definition pending publication.",
+      "evaluation_period": "Pending verified PEAD research results.",
+      "horizons": {
+        "20": {
+          "sample_size": null,
+          "mean_return_pct": null,
+          "median_return_pct": null,
+          "positive_pct": null
+        }
+      },
+      "methodology": null,
+      "source": null,
+      "limitations": [
+        "Verified numerical PEAD results were not available in this repository when v0.1 was created.",
+        "No new backtest has been performed.",
+        "The event definition, methodology, sample period and data source must be verified before status can become ok."
+      ]
+    },
+    "pead_nordic_pre_report_drift_20d_q5": {
+      "status": "verified",
+      "market": "Nordic equities (scoped research universe; not Sweden-only)",
+      "event_definition": "PEAD_PRE_REPORT_DRIFT_20D_Q5_LONG_FIXED_EXIT_v1: top quintile Q5 of pre_report_return_20d, i.e. price drift in the 20 trading days preceding an earnings report; fixed event-level exits.",
+      "evaluation_period": "17 research years; exact start and end calendar dates not specified in cited summary",
+      "horizons": {
+        "20": {
+          "sample_size": 3650,
+          "mean_return_pct": 0.64916862374572,
+          "median_return_pct": 0.38721237864078,
+          "positive_pct": 51.67123287671233
+        },
+        "40": {
+          "sample_size": 3644,
+          "mean_return_pct": 1.25382817567067,
+          "median_return_pct": 0.57469725473857,
+          "positive_pct": 52.05817782656421
+        }
+      },
+      "methodology": "Frozen scoped event-level PEAD_06/PEAD_07 Q5 long rule, fixed exits 20 or 40 trading days, net of 10 bps round-trip costs. 425 unique instruments across 17 years in PEAD_06 selection. Not a portfolio backtest.",
+      "source": "PEAD_04B_PEAD_RESEARCH_STOP_OR_NEW_DATA_DECISION_AND_REPORT_RESEARCH_REPORT.md; https://drive.google.com/file/d/1yEHis_UKA6Z1SPmWjKyfwueFJIc9MsDV/view ; PEAD_06 and PEAD_07 source packet; scope PEAD_SCOPE_EXCLUDE_FINAL_HOLD_CASES_v1",
+      "limitations": [
+        "Scoped universe excludes 7 unresolved historical instrument cases; full strict universe was not cleared.",
+        "Event-level evidence, not an investable portfolio strategy or CAGR.",
+        "PEAD_08 portfolio feasibility failed capacity constraints: max 10 simultaneous positions accepted 26.1% (20d) and 16.1% (40d) of signals.",
+        "No validated execution model, sizing, stops, or regime filters.",
+        "Signal is PRE-report drift, not a positive earnings-day reaction; initial reaction signal was weak/unstable.",
+        "Exact calendar start/end dates require verification against primary research artifacts."
+      ]
+    }
+  }
+}
