@@ -1701,16 +1701,17 @@ transport_security = TransportSecuritySettings(
     enable_dns_rebinding_protection=True,
     allowed_hosts=[
         "machine-job-fishing-net.onrender.com",
+        "historical-edge-v01-test.onrender.com",
         "127.0.0.1:*",
         "localhost:*",
     ],
     allowed_origins=[
         "https://machine-job-fishing-net.onrender.com",
+        "https://historical-edge-v01-test.onrender.com",
         "http://127.0.0.1:*",
         "http://localhost:*",
     ],
 )
-
 
 # ---------------------------------------------------------------------------
 # TSRE MCP MOUNT
